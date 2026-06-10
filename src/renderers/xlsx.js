@@ -1,15 +1,23 @@
 const MAX = 10 * 1024 * 1024;
 
+// module-level promise дедуплицирует параллельную загрузку vendor-скрипта
+// (две модалки / быстрое переоткрытие не должны добавлять несколько <script>).
+let _libPromise = null;
 function ensureLib(params) {
   if (window.XLSX) return Promise.resolve(window.XLSX);
-  return new Promise((resolve, reject) => {
+  if (_libPromise) return _libPromise;
+  _libPromise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
     const cdnBase = (params && params.path) ? params.path : '';
     s.src = cdnBase + '/vendor/xlsx.full.min.js';
-    s.onload = () => resolve(window.XLSX);
-    s.onerror = () => reject(new Error('Не удалось загрузить SheetJS'));
+    s.onload = () => {
+      if (window.XLSX) resolve(window.XLSX);
+      else { _libPromise = null; reject(new Error('SheetJS загружен, но window.XLSX пуст')); }
+    };
+    s.onerror = () => { _libPromise = null; reject(new Error('Не удалось загрузить SheetJS')); };
     document.head.appendChild(s);
   });
+  return _libPromise;
 }
 
 export default function render({ $, file, $body, params, loader }) {

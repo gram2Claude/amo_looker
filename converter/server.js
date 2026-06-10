@@ -72,7 +72,9 @@ app.post('/convert', async (req, res) => {
   if (!body || !body.length) return res.status(400).json({ error: 'empty body' });
   if (body.length > MAX_BYTES) return res.status(413).json({ error: 'file too large' });
 
-  const rawName = decodeURIComponent(req.get('X-Filename') || 'file');
+  let rawName;
+  try { rawName = decodeURIComponent(req.get('X-Filename') || 'file'); }
+  catch (e) { return res.status(400).json({ error: 'bad filename' }); }   // битый %xx в заголовке
   const ext = (rawName.match(/\.([a-z0-9]+)$/i) || [, ''])[1].toLowerCase();
   if (!ALLOWED_EXT.has(ext)) return res.status(415).json({ error: 'unsupported type' });
 
@@ -123,7 +125,9 @@ function runSoffice(input, outdir, profile, isAborted) {
       '--convert-to', 'pdf', '--outdir', outdir, input
     ];
     // detached → своя process group, чтобы по таймауту/abort убить всё дерево
-    const proc = spawn(SOFFICE, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    // stdio полностью ignore: не читаем pipe (иначе при полном буфере soffice
+    // завис бы до таймаута, занимая слот) и не логируем содержимое/имя файла.
+    const proc = spawn(SOFFICE, args, { stdio: 'ignore', detached: true });
     let done = false;
     const killTree = () => { try { process.kill(-proc.pid, 'SIGKILL'); } catch (e) { try { proc.kill('SIGKILL'); } catch (e2) {} } };
     const finish = (fn, arg) => { if (done) return; done = true; clearTimeout(timer); clearInterval(abortPoll); fn(arg); };
@@ -136,6 +140,17 @@ function runSoffice(input, outdir, profile, isAborted) {
     proc.on('close', (code) => finish(code === 0 ? resolve : reject, code === 0 ? undefined : new Error('soffice exit ' + code)));
   });
 }
+
+// Ошибки body-парсера (напр. 413 от express.raw при превышении limit) случаются
+// ДО хендлера — без этого middleware ответ ушёл бы без CORS и браузер увидел бы
+// opaque/CORS-ошибку вместо нормального 413.
+app.use((err, req, res, next) => {
+  applyCors(req, res);
+  if (err && (err.type === 'entity.too.large' || err.status === 413)) {
+    return res.status(413).json({ error: 'file too large' });
+  }
+  return res.status(400).json({ error: 'bad request' });
+});
 
 app.listen(PORT, HOST, () => {
   console.log(`[nexus-converter] listening on ${HOST}:${PORT}, concurrency=${CONCURRENCY}, max=${MAX_BYTES}B`);
