@@ -1,0 +1,21 @@
+{
+  "widget": {
+    "name": "widget.name",
+    "description": "widget.description",
+    "short_description": "widget.short_description",
+    "version": "0.1.0",
+    "interface_version": 2,
+    "init_once": false,
+    "locale": ["ru", "en"],
+    "installation": false,
+    "support": {
+      "link": "https://github.com/gram2Claude/amo_looker",
+      "email": "corpai86@gmail.com"
+    }
+  },
+  "locations": [
+    "lcard-1",
+    "ccard-1",
+    "comcard-1"
+  ]
+}
