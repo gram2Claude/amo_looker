@@ -1,7 +1,7 @@
 const MAX = 2 * 1024 * 1024;
 
 export default function render({ $, file, $body }) {
-  return fetch(file.href, { credentials: 'include' })
+  return fetch(file.href, { credentials: 'same-origin' })
     .then((r) => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const len = r.headers.get('content-length');

@@ -15,7 +15,7 @@ function ensureLib(params) {
 export default function render({ $, file, $body, params }) {
   return Promise.all([
     ensureLib(params),
-    fetch(file.href, { credentials: 'include' }).then((r) => {
+    fetch(file.href, { credentials: 'same-origin' }).then((r) => {
       const len = r.headers.get('content-length');
       if (len && Number(len) > MAX) throw new Error('XLSX больше 10 МБ — скачайте файл');
       return r.arrayBuffer();

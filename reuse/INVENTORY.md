@@ -1,5 +1,7 @@
 # Инвентарь переиспользуемых материалов из raw/
 
+> **AMO-1 (2026-06-10): код перенесён из `reuse/source/` в корень репо** (src/, build.js, manifest.json, style.css, i18n/, images/, package.json) с фиксом `credentials:'same-origin'`; `reuse/source/` удалён. Здесь остались только документы (`docs/`) и этот инвентарь как история решений.
+
 **Дата:** 2026-06-10. Источник: `raw/toolkeeper-looker-handoff/` (handoff от Михаила).
 Сюда скопировано всё переиспользуемое, очищенное от мусора (`__MACOSX/`, `.DS_Store`, артефакты сборки).
 

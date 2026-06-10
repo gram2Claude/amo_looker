@@ -6,7 +6,7 @@ export default function render({ $, file, $body, settings }) {
   const endpoint = (settings && settings.converter_url) || DEFAULT_ENDPOINT;
   const token    = (settings && settings.converter_token) || '';
 
-  return fetch(file.href, { credentials: 'include' })
+  return fetch(file.href, { credentials: 'same-origin' })
     .then((r) => r.arrayBuffer())
     .then((buf) => fetch(endpoint, {
       method: 'POST',
