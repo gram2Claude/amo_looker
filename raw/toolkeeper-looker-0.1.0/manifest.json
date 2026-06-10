@@ -1,0 +1,26 @@
+{
+  "widget": {
+    "name": "widget.name",
+    "description": "widget.description",
+    "short_description": "widget.short_description",
+    "version": "0.1.0",
+    "interface_version": 2,
+    "init_once": false,
+    "locale": ["ru", "en"],
+    "installation": false,
+    "support": {
+      "link": "https://toolkeeper.io",
+      "email": "support@toolkeeper.io"
+    }
+  },
+  "locations": [
+    "lcard-1",
+    "ccard-1",
+    "comcard-1",
+    "advanced_settings"
+  ],
+  "advanced": {
+    "title": "widget.advanced.title",
+    "title_lang_key": "widget.advanced.title"
+  }
+}
