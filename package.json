@@ -1,5 +1,5 @@
 {
-  "name": "toolkeeper-amo-widget",
+  "name": "nexus-amo-widget",
   "version": "0.1.0",
   "private": true,
   "description": "Toolkeeper Looker — preview attachments inline in amoCRM (no download).",

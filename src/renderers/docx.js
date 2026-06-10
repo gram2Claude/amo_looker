@@ -21,7 +21,7 @@ export default function render({ file, $body, params }) {
     fetch(file.href, { credentials: 'same-origin' }).then((r) => r.arrayBuffer())
   ]).then(([docx, buf]) => {
     const container = document.createElement('div');
-    container.className = 'tk-render-docx';
+    container.className = 'nx-render-docx';
     $body.empty().append(container);
     return docx.renderAsync(buf, container);
   });

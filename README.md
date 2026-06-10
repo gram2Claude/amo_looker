@@ -1,4 +1,4 @@
-# Toolkeeper Looker — amoCRM widget
+# Nexus Looker — amoCRM widget
 
 Собственный виджет «глазик» для amoCRM (замена CatCode Looker). Добавляет рядом с каждым файлом в чате/примечаниях/письмах кнопку предпросмотра — открывает модалку без скачивания файла.
 
@@ -27,7 +27,7 @@ src/              # ES-модули
   fileUtils.js    # detect kind by extension
   renderers/      # один файл на формат
 vendor/           # минифайды docx-preview, SheetJS (положить руками)
-build.js          # сборка → dist/ → releases/toolkeeper-looker-X.Y.Z.zip
+build.js          # сборка → dist/ → releases/nexus-looker-X.Y.Z.zip
 ```
 
 ## Сборка
@@ -37,12 +37,12 @@ npm install
 npm run build
 ```
 
-Получаем `releases/toolkeeper-looker-0.1.0.zip` — это и есть архив для загрузки в amoCRM.
+Получаем `releases/nexus-looker-0.1.0.zip` — это и есть архив для загрузки в amoCRM.
 
 ## Установка (приватный виджет)
 
 1. toolkeeper.amocrm.ru → **Настройки → Интеграции → Создать интеграцию**
-2. Выбрать «Загрузить виджет», прикрепить `releases/toolkeeper-looker-*.zip`
+2. Выбрать «Загрузить виджет», прикрепить `releases/nexus-looker-*.zip`
 3. Подтвердить установку
 
 Обновление: bump `version` в `manifest.json` → `npm run build` → переустановить zip через тот же интерфейс.

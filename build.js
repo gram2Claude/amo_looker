@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-/* Build pipeline for the Toolkeeper Looker amoCRM widget.
-   - Bundles src/* ES modules into a single IIFE that exposes TKLooker.default
+/* Build pipeline for the Nexus Looker amoCRM widget.
+   - Bundles src/* ES modules into a single IIFE that exposes NXLooker.default
    - Wraps the IIFE in an AMD define(['jquery'], ...) so amoCRM RequireJS sees it
    - Copies static assets to dist/
    - Packages everything into a versioned zip in releases/
@@ -42,7 +42,7 @@ async function bundleScript() {
     platform: 'browser',
     target: ['es2017'],
     minify: false,
-    globalName: 'TKLooker',
+    globalName: 'NXLooker',
     outfile: intermediate,
     logLevel: 'info'
   });
@@ -50,11 +50,11 @@ async function bundleScript() {
   fs.unlinkSync(intermediate);
 
   const amd = [
-    '// Toolkeeper Looker — generated bundle, do not edit',
+    '// Nexus Looker — generated bundle, do not edit',
     `// version ${version}`,
     'define(["jquery"], function ($) {',
     inner,
-    'var factory = (typeof TKLooker !== "undefined" && TKLooker.default) ? TKLooker.default : null;',
+    'var factory = (typeof NXLooker !== "undefined" && NXLooker.default) ? NXLooker.default : null;',
     'return factory ? factory($) : null;',
     '});'
   ].join('\n');
@@ -74,7 +74,7 @@ function copyStatics() {
 
 function pack() {
   fs.mkdirSync(RELEASES, { recursive: true });
-  const outZip = path.join(RELEASES, `toolkeeper-looker-${version}.zip`);
+  const outZip = path.join(RELEASES, `nexus-looker-${version}.zip`);
   return new Promise((resolve, reject) => {
     const output  = fs.createWriteStream(outZip);
     const archive = archiver('zip', { zlib: { level: 9 } });

@@ -1,10 +1,10 @@
 {
   "widget": {
-    "name": "Toolkeeper Looker",
+    "name": "Nexus Looker",
     "short_description": "Предпросмотр документов без скачивания",
     "description": "Виджет добавляет кнопку «глазик» рядом с каждым файлом в чатах, примечаниях и письмах amoCRM. По нажатию открывается модальное окно с предпросмотром: PDF, DOCX, XLSX, картинки, текстовые файлы, а также legacy-форматы (.doc/.xls/.ppt/.pptx). Не требует скачивания файла на компьютер.",
     "advanced": {
-      "title": "Toolkeeper Looker — настройки"
+      "title": "Nexus Looker — настройки"
     },
     "errors": {
       "fetch_failed": "Не удалось загрузить файл",

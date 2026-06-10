@@ -20,7 +20,7 @@ const FEED_ROOT_SELECTORS = [
   '.linked-forms__contacts'
 ];
 
-const INJECTED_ATTR = 'data-tk-injected';
+const INJECTED_ATTR = 'data-nx-injected';
 
 export default class Injector {
   constructor({ $, onEyeClick }) {
@@ -47,7 +47,7 @@ export default class Injector {
       this.observer.observe(root, { childList: true, subtree: true });
       this._injectInto(root);
     });
-    this.$(document).on('click.tkLooker', '.tk-eye', this._click);
+    this.$(document).on('click.nxLooker', '.nx-eye', this._click);
   }
 
   stop() {
@@ -55,8 +55,8 @@ export default class Injector {
       this.observer.disconnect();
       this.observer = null;
     }
-    this.$(document).off('click.tkLooker');
-    this.$('.tk-eye').remove();
+    this.$(document).off('click.nxLooker');
+    this.$('.nx-eye').remove();
     this.$(`[${INJECTED_ATTR}]`).removeAttr(INJECTED_ATTR);
   }
 
@@ -95,7 +95,7 @@ export default class Injector {
 
   _makeButton(meta) {
     const btn = document.createElement('span');
-    btn.className = 'tk-eye';
+    btn.className = 'nx-eye';
     btn.setAttribute('data-href', meta.href);
     btn.setAttribute('data-name', meta.name);
     btn.setAttribute('title', 'Предпросмотр');

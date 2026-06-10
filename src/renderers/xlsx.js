@@ -22,12 +22,12 @@ export default function render({ $, file, $body, params }) {
     })
   ]).then(([XLSX, buf]) => {
     const wb = XLSX.read(buf, { type: 'array' });
-    const $wrap = $('<div class="tk-render-xlsx"/>');
-    const $tabs = $('<div class="tk-xlsx-tabs"/>');
-    const $sheet = $('<div class="tk-xlsx-sheet"/>');
+    const $wrap = $('<div class="nx-render-xlsx"/>');
+    const $tabs = $('<div class="nx-xlsx-tabs"/>');
+    const $sheet = $('<div class="nx-xlsx-sheet"/>');
     wb.SheetNames.forEach((name, i) => {
-      const $tab = $('<button class="tk-xlsx-tab"/>').text(name).on('click', () => {
-        $tabs.find('.tk-xlsx-tab').removeClass('is-active');
+      const $tab = $('<button class="nx-xlsx-tab"/>').text(name).on('click', () => {
+        $tabs.find('.nx-xlsx-tab').removeClass('is-active');
         $tab.addClass('is-active');
         $sheet.html(XLSX.utils.sheet_to_html(wb.Sheets[name]));
       });

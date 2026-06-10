@@ -1,6 +1,6 @@
 {
   "project": {
-    "name": "Toolkeeper Looker — amoCRM виджет предпросмотра файлов",
+    "name": "Nexus Looker — amoCRM виджет предпросмотра файлов",
     "slug": "amo_looker",
     "start_date": "2026-06-11",
     "global_h": 65.75,
@@ -34,7 +34,7 @@
               "id": "T1",
               "name": "Перенос reuse/source в корень репо + фикс fetch-credentials + сборка zip",
               "description": "Перенести исходники виджета из reuse/source/ в корень репо (src/, build.js, manifest.json, style.css, i18n/, images/, package.json). Во всех 4 рендерерах (docx/xlsx/text/legacy) заменить credentials:'include' на 'same-origin' (include ломается на CORS-редиректе — доказано разведкой). npm ci + npm run build собирает zip.",
-              "done_criteria": "npm run build выдаёт releases/toolkeeper-looker-0.1.x.zip без ошибок; в коде нет credentials:'include'; структура репо соответствует handoff-плану.",
+              "done_criteria": "npm run build выдаёт releases/nexus-looker-0.1.x.zip без ошибок; в коде нет credentials:'include'; структура репо соответствует handoff-плану.",
               "realistic_h": 1.5,
               "pessimistic_h": 3,
               "estimate_h": 3,

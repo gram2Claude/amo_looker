@@ -1,4 +1,4 @@
-# Глобальный план: Toolkeeper Looker (amo_looker) — v2
+# Глобальный план: Nexus Looker (amo_looker) — v2
 
 **Сгенерирован:** 2026-06-10 (v2 после двух независимых ревью — см. `../04_reviews/01_plan_review_reconciliation.md`) · Канон: `00_amo_looker_plan.json` · Расчёт: `schedule.mjs` (буфер 1.30, 8ч/день, пн–пт, праздники РФ)
 

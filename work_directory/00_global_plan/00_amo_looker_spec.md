@@ -1,4 +1,4 @@
-# Спека: Toolkeeper Looker (amo_looker)
+# Спека: Nexus Looker (amo_looker)
 
 **Дата:** 2026-06-10. Источники: handoff Михаила (`reuse/docs/handoff_plan.md`, `handoff_README.md`), DOM-разведка (`work_directory/01_specs/01_dom_recon_amocrm.md`), инвентарь (`reuse/INVENTORY.md`).
 

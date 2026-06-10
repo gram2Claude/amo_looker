@@ -1,13 +1,13 @@
 # Проект amo_looker — обзор по материалам handoff
 
-> Составлено 2026-06-10 по изучению `raw/` (handoff-пакет `toolkeeper-looker`).
-> Источники: `raw/toolkeeper-looker-handoff/.../README.md` (передаточная записка),
+> Составлено 2026-06-10 по изучению `raw/` (handoff-пакет `nexus-looker`).
+> Источники: `raw/nexus-looker-handoff/.../README.md` (передаточная записка),
 > `plan.md` (полный план шагов 0–8), исходники `source/`, собранный виджет
-> `raw/toolkeeper-looker-0.1.0/` (распакованный zip v0.1.0).
+> `raw/nexus-looker-0.1.0/` (распакованный zip v0.1.0).
 
 ## 1. Что это за проект
 
-**Toolkeeper Looker** — приватный виджет для amoCRM (аккаунт `toolkeeper.amocrm.ru`).
+**Nexus Looker** — приватный виджет для amoCRM (аккаунт `toolkeeper.amocrm.ru`).
 Добавляет кнопку-«глазик» рядом с каждым файлом в чате / примечании / письме карточки сделки
 и открывает **предпросмотр файла в модалке без скачивания**.
 
@@ -57,8 +57,8 @@
   `fileUtils.js`; 6 рендереров), `style.css` (~3 КБ), i18n ru/en (включая тексты
   ошибок), 5 PNG-плейсхолдеров правильных размеров.
 - **Сборка работает**: `npm ci && npm run build` (Node ≥ 18, deps: esbuild + archiver) →
-  `source/releases/toolkeeper-looker-0.1.0.zip` (~13 КБ) — **собран и готов к заливке**
-  в amoCRM. Распакованная копия сборки лежит в `raw/toolkeeper-looker-0.1.0/`.
+  `source/releases/nexus-looker-0.1.0.zip` (~13 КБ) — **собран и готов к заливке**
+  в amoCRM. Распакованная копия сборки лежит в `raw/nexus-looker-0.1.0/`.
 - **Качественные мелочи уже в коде**: `destroy()` отписывает observer и снимает
   listeners; настройки `converter_url`/`converter_token` читаются из
   `advanced_settings` (можно переопределить без пересборки); лимиты размера в
@@ -126,9 +126,9 @@ curl-проверка конвертера; затем 3–5 дней парал
 
 | Путь | Что это |
 |---|---|
-| `raw/toolkeeper-looker-handoff/.../README.md` | передаточная записка (готово / не готово / как собрать и залить) |
-| `raw/toolkeeper-looker-handoff/.../plan.md` | полный план: контекст, факты про виджеты amoCRM, архитектура, шаги 0–8, риски, верификация |
-| `raw/toolkeeper-looker-handoff/.../source/` | исходники виджета (см. §3) |
-| `raw/toolkeeper-looker-handoff/.../source/releases/toolkeeper-looker-0.1.0.zip` | собранный артефакт для заливки в amoCRM |
-| `raw/toolkeeper-looker-0.1.0/` | тот же артефакт в распакованном виде (AMD-бандл v0.1.0) |
-| `raw/toolkeeper-looker-handoff.tar.gz` | исходный архив handoff |
+| `raw/nexus-looker-handoff/.../README.md` | передаточная записка (готово / не готово / как собрать и залить) |
+| `raw/nexus-looker-handoff/.../plan.md` | полный план: контекст, факты про виджеты amoCRM, архитектура, шаги 0–8, риски, верификация |
+| `raw/nexus-looker-handoff/.../source/` | исходники виджета (см. §3) |
+| `raw/nexus-looker-handoff/.../source/releases/nexus-looker-0.1.0.zip` | собранный артефакт для заливки в amoCRM |
+| `raw/nexus-looker-0.1.0/` | тот же артефакт в распакованном виде (AMD-бандл v0.1.0) |
+| `raw/nexus-looker-handoff.tar.gz` | исходный архив handoff |

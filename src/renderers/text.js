@@ -9,6 +9,6 @@ export default function render({ $, file, $body }) {
       return r.text();
     })
     .then((txt) => {
-      $body.empty().append($('<pre class="tk-render-text"/>').text(txt));
+      $body.empty().append($('<pre class="nx-render-text"/>').text(txt));
     });
 }

@@ -1,6 +1,6 @@
-/* Toolkeeper Looker — eye button + preview modal */
+/* Nexus Looker — eye button + preview modal */
 
-.tk-eye {
+.nx-eye {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -14,10 +14,10 @@
   vertical-align: middle;
   transition: transform 0.1s ease, background 0.1s ease;
 }
-.tk-eye:hover { background: #1565c0; transform: scale(1.08); }
-.tk-eye svg  { pointer-events: none; }
+.nx-eye:hover { background: #1565c0; transform: scale(1.08); }
+.nx-eye svg  { pointer-events: none; }
 
-.tk-modal-overlay {
+.nx-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
@@ -26,7 +26,7 @@
   align-items: center;
   justify-content: center;
 }
-.tk-modal {
+.nx-modal {
   background: #fff;
   width: min(90vw, 1100px);
   height: min(90vh, 800px);
@@ -36,7 +36,7 @@
   overflow: hidden;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
 }
-.tk-modal__head {
+.nx-modal__head {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -44,7 +44,7 @@
   border-bottom: 1px solid #e3e5e8;
   background: #f7f8fa;
 }
-.tk-modal__name {
+.nx-modal__name {
   flex: 1;
   font-weight: 600;
   color: #2b323a;
@@ -52,13 +52,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.tk-modal__download {
+.nx-modal__download {
   font-size: 13px;
   color: #1976d2;
   text-decoration: none;
 }
-.tk-modal__download:hover { text-decoration: underline; }
-.tk-modal__close {
+.nx-modal__download:hover { text-decoration: underline; }
+.nx-modal__close {
   background: transparent;
   border: 0;
   font-size: 24px;
@@ -67,13 +67,13 @@
   color: #6b7480;
   padding: 0 4px;
 }
-.tk-modal__body {
+.nx-modal__body {
   flex: 1;
   overflow: auto;
   background: #f0f2f5;
   position: relative;
 }
-.tk-modal__loading {
+.nx-modal__loading {
   position: absolute;
   inset: 0;
   display: flex;
@@ -82,23 +82,23 @@
   color: #6b7480;
   font-size: 14px;
 }
-.tk-modal__error {
+.nx-modal__error {
   padding: 24px;
   color: #c62828;
   text-align: center;
 }
 
 /* Renderers */
-.tk-render-image  { max-width: 100%; max-height: 100%; margin: auto; display: block; }
-.tk-render-pdf    { width: 100%; height: 100%; border: 0; background: #fff; }
-.tk-render-text   { padding: 16px; font: 12px/1.5 'SF Mono', Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
-.tk-render-docx   { padding: 16px; background: #fff; }
-.tk-render-docx section { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); margin: 8px auto; padding: 24px; max-width: 800px; }
+.nx-render-image  { max-width: 100%; max-height: 100%; margin: auto; display: block; }
+.nx-render-pdf    { width: 100%; height: 100%; border: 0; background: #fff; }
+.nx-render-text   { padding: 16px; font: 12px/1.5 'SF Mono', Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+.nx-render-docx   { padding: 16px; background: #fff; }
+.nx-render-docx section { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); margin: 8px auto; padding: 24px; max-width: 800px; }
 
-.tk-render-xlsx { display: flex; flex-direction: column; height: 100%; background: #fff; }
-.tk-xlsx-tabs   { display: flex; gap: 4px; padding: 8px 12px; background: #f7f8fa; border-bottom: 1px solid #e3e5e8; overflow-x: auto; }
-.tk-xlsx-tab    { padding: 4px 12px; background: #fff; border: 1px solid #e3e5e8; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap; }
-.tk-xlsx-tab.is-active { background: #1976d2; color: #fff; border-color: #1976d2; }
-.tk-xlsx-sheet  { flex: 1; overflow: auto; padding: 8px; }
-.tk-xlsx-sheet table { border-collapse: collapse; font-size: 12px; }
-.tk-xlsx-sheet td, .tk-xlsx-sheet th { border: 1px solid #e3e5e8; padding: 4px 8px; }
+.nx-render-xlsx { display: flex; flex-direction: column; height: 100%; background: #fff; }
+.nx-xlsx-tabs   { display: flex; gap: 4px; padding: 8px 12px; background: #f7f8fa; border-bottom: 1px solid #e3e5e8; overflow-x: auto; }
+.nx-xlsx-tab    { padding: 4px 12px; background: #fff; border: 1px solid #e3e5e8; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+.nx-xlsx-tab.is-active { background: #1976d2; color: #fff; border-color: #1976d2; }
+.nx-xlsx-sheet  { flex: 1; overflow: auto; padding: 8px; }
+.nx-xlsx-sheet table { border-collapse: collapse; font-size: 12px; }
+.nx-xlsx-sheet td, .nx-xlsx-sheet th { border: 1px solid #e3e5e8; padding: 4px 8px; }

@@ -21,32 +21,32 @@ export default class Modal {
     this.close();
     const $ = this.$;
     this.$root = $(
-      '<div class="tk-modal-overlay">' +
-        '<div class="tk-modal">' +
-          '<div class="tk-modal__head">' +
-            '<span class="tk-modal__name"></span>' +
-            '<a class="tk-modal__download" target="_blank" rel="noopener"></a>' +
-            '<button class="tk-modal__close" aria-label="Close">&times;</button>' +
+      '<div class="nx-modal-overlay">' +
+        '<div class="nx-modal">' +
+          '<div class="nx-modal__head">' +
+            '<span class="nx-modal__name"></span>' +
+            '<a class="nx-modal__download" target="_blank" rel="noopener"></a>' +
+            '<button class="nx-modal__close" aria-label="Close">&times;</button>' +
           '</div>' +
-          '<div class="tk-modal__body"><div class="tk-modal__loading"></div></div>' +
+          '<div class="nx-modal__body"><div class="nx-modal__loading"></div></div>' +
         '</div>' +
       '</div>'
     );
-    this.$root.find('.tk-modal__name').text(file.name);
-    this.$root.find('.tk-modal__download').attr('href', file.href).text(this._t('modal.download'));
-    this.$root.find('.tk-modal__loading').text(this._t('modal.loading'));
+    this.$root.find('.nx-modal__name').text(file.name);
+    this.$root.find('.nx-modal__download').attr('href', file.href).text(this._t('modal.download'));
+    this.$root.find('.nx-modal__loading').text(this._t('modal.loading'));
     this.$root.on('click', (e) => { if (e.target === this.$root[0]) this.close(); });
-    this.$root.find('.tk-modal__close').on('click', () => this.close());
-    $(document).on('keydown.tkLooker', (e) => { if (e.key === 'Escape') this.close(); });
+    this.$root.find('.nx-modal__close').on('click', () => this.close());
+    $(document).on('keydown.nxLooker', (e) => { if (e.key === 'Escape') this.close(); });
     $('body').append(this.$root);
 
     const kind = file.kind || detectKind(file) || 'legacy';
     const renderer = RENDERERS[kind] || RENDERERS.legacy;
-    const $body = this.$root.find('.tk-modal__body');
+    const $body = this.$root.find('.nx-modal__body');
     Promise.resolve()
       .then(() => renderer({ $, file, $body, params: this.params, settings: this.getSettings(), langs: this.langs }))
       .catch((err) => {
-        $body.empty().append($('<div class="tk-modal__error"/>').text(String(err && err.message || err)));
+        $body.empty().append($('<div class="nx-modal__error"/>').text(String(err && err.message || err)));
       });
   }
 
@@ -55,7 +55,7 @@ export default class Modal {
       this.$root.remove();
       this.$root = null;
     }
-    this.$(document).off('keydown.tkLooker');
+    this.$(document).off('keydown.nxLooker');
   }
 
   _t(key) {
