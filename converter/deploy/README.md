@@ -1,20 +1,20 @@
 # Деплой-инфраструктура конвертера (сервер 72.56.1.123, jino.ru)
 
-Состояние почвы под эпоху 2 (подготовлено 2026-06-10, AMO-13/15):
+Состояние почвы под эпоху 2 (2026-06-10, prep AMO-13/15):
 
-## Установлено на сервере
-- **Docker** 29.1.3 + **compose v2** 2.40.3 (`/etc/docker/daemon.json` = `docker-daemon.json` — зеркала, т.к. Docker Hub режет анонимный pull). `docker run hello-world` — OK.
-- **nginx** 1.24.0, vhost `nexus-oko.conf` (= `nginx-nexus-oko.conf`), проксирует на `127.0.0.1:8094` (там будет контейнер конвертера). `nginx -t` — OK.
-- **certbot** 2.9.0 + plugin nginx.
+## Установлено и работает
+- **Docker** 29.1.3 + **compose v2** (`/etc/docker/daemon.json` = `docker-daemon.json` — зеркала, Docker Hub режет анонимный pull). `docker run hello-world` — OK.
+- **nginx** 1.24, vhost `nexus-oko.conf` (= `nginx-nexus-oko.conf`): 80 → 301 → 443, 443 ssl → proxy `127.0.0.1:8094`. `nginx -t` OK, локально отдаёт 502 (бэкенда-конвертера ещё нет — ожидаемо).
+- **TLS-сертификат Let's Encrypt** — ✅ ВЫПУЩЕН для nexus-oko.naithon.one через **DNS-01** (TXT `_acme-challenge` в Cloudflare, зона naithon.one). Действует до 2026-09-08. `/etc/letsencrypt/live/nexus-oko.naithon.one/`.
 - **ufw**: allow OpenSSH + Nginx Full, enabled.
 - Вход: `ssh amo-devbox` (ключ `~/.ssh/amo_devbox`).
 
-## TLS — НЕ выпущен (блокер уровня хостера)
-`certbot --nginx -d nexus-oko.naithon.one` упал: ACME HTTP-01 не достучался до :80 снаружи
-(0 acme-запросов в nginx access.log; внешний TCP к 80 «открывается», но HTTP не доходит — скрабинг/блок входящего у jino).
-Развязка (нужно одно из):
-1. Открыть/пробросить входящие 80 и 443 в панели jino (затем `certbot --nginx -d nexus-oko.naithon.one --redirect`).
-2. DNS-01 challenge: `certbot certonly --manual --preferred-challenges dns -d nexus-oko.naithon.one`
-   → добавить TXT `_acme-challenge.nexus-oko.naithon.one` в зону naithon.one (или API-плагин зоны).
-Конвертеру (T13) сертификат не нужен для локальной разработки на сервере; нужен к моменту,
-когда виджет на проде будет ходить на https://nexus-oko.naithon.one (T15/T16).
+## ⚠️ ОТКРЫТЫЙ БЛОКЕР: jino режет входящий веб-трафик (80 и 443)
+Снаружи TCP к 80/443 «открывается», но HTTP/TLS не проходит (таймаут с нескольких источников; 0 acme-hits в access.log при HTTP-01). ufw на сервере открыт — блок ВЫШЕ, на сетевом уровне хостера jino (firewall/anti-DDoS/scrubbing).
+**Следствие:** браузер пользователя (виджет в amoCRM) пока НЕ достучится до `https://nexus-oko.naithon.one/convert` — это нужно к T16 (legacy e2e) и T19 (прод), НЕ раньше. Разработка конвертера (T13) идёт локально на сервере по `http://127.0.0.1:8094` — блок не мешает.
+**Что нужно (действие на стороне хостинга):** в панели jino открыть/разрешить ВХОДЯЩИЕ 80 и 443 (сетевые правила / security group), либо тикет в саппорт «откройте входящий веб-трафик на VPS». После этого внешний доступ заработает без изменений на сервере.
+
+## TLS autorenew
+Сертификат выпущен в --manual режиме → автообновления НЕТ. Для autorenew перейти на DNS-01 с Cloudflare API:
+`apt install python3-certbot-dns-cloudflare`, токен (Zone:DNS:Edit на naithon.one) в `/root/.secrets/cloudflare.ini` (chmod 600),
+`certbot certonly --dns-cloudflare --dns-cloudflare-credentials /root/.secrets/cloudflare.ini -d nexus-oko.naithon.one` — тогда systemd-timer обновляет сам. Сделать к T15.
