@@ -1,0 +1,15 @@
+{
+  "name": "amo-preview-converter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nexus Looker — LibreOffice headless converter (legacy office → PDF) for amoCRM widget",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "p-limit": "^6.2.0"
+  }
+}

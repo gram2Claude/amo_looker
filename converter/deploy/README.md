@@ -15,7 +15,13 @@
 - `https://nexus-oko.naithon.one/` → TLS валиден (CN=nexus-oko.naithon.one), HTTP 502 (ждёт конвертер).
 - `http://` → 301 на https.
 
-## Дальше (эпоха 2)
-- T13: собрать `amo-preview-converter` (Dockerfile + сервис /convert + /health), `docker compose up` → слушает 127.0.0.1:8094, nginx уже проксирует.
-- Конкурентность LibreOffice: p-limit(2) (2 CPU), mem_limit контейнера ~2 GB (есть 3.8 GB).
-- TLS и внешний доступ уже готовы — отдельных действий по сертификату/портам не требуется.
+## Конвертер развёрнут (AMO-13, 2026-06-11) ✅
+- Код в репо: `converter/` (server.js, Dockerfile, docker-compose.yml, test.sh). На сервере: `/opt/nexus-converter/`.
+- Контейнер `nexus-converter` (image `nexus-converter:latest`): Up, **healthy**, publish `127.0.0.1:8094`.
+- Токен в `/opt/nexus-converter/.env` (`CONVERTER_TOKEN`, openssl rand -hex 24) — **НЕ в git** (gitignore + dockerignore).
+- Лимиты: mem 2g, cpus 2, pids 256, tmpfs /tmp 1g; конкурентность p-limit(2); таймаут 30с; макс 50МБ.
+- e2e-смоук пройден: реальный .doc(кириллица)→PDF 200 (%PDF-1.6); 51МБ→413; no-token→401; OPTIONS→204; чужой Origin без ACAO; 3 параллельных→очередь держит; через nginx HTTPS /health→200.
+- Управление: `cd /opt/nexus-converter && docker compose --env-file .env up -d|down|logs`. Обновление кода: scp + `docker compose build && up -d`.
+
+## Осталось для эпохи 2 (не AMO-13)
+- T16: связать виджет с конвертером — передать `converter_url`/`converter_token` в legacy.js (env при сборке или advanced_settings), e2e .doc/.xls из ленты → PDF в модалке.
