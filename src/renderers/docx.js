@@ -12,13 +12,10 @@ function ensureLib(params) {
   });
 }
 
-export default function render({ file, $body, params }) {
+export default function render({ file, $body, params, loader }) {
   return Promise.all([
     ensureLib(params),
-    // 'same-origin', НЕ 'include': кука нужна только на первом same-origin хопе;
-    // на CORS-редиректе amo→drive→S3 credentialed-запрос несовместим с ACAO:*
-    // (см. work_directory/01_specs/01_dom_recon_amocrm.md)
-    fetch(file.href, { credentials: 'same-origin' }).then((r) => r.arrayBuffer())
+    loader.fetchBuffer(file.href).then(({ buf }) => buf)
   ]).then(([docx, buf]) => {
     const container = document.createElement('div');
     container.className = 'nx-render-docx';

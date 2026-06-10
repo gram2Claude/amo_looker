@@ -1,4 +1,5 @@
 import { detectKind } from './fileUtils.js';
+import Loader from './loader.js';
 import pdf    from './renderers/pdf.js';
 import image  from './renderers/image.js';
 import text   from './renderers/text.js';
@@ -15,6 +16,7 @@ export default class Modal {
     this.params = params || {};
     this.getSettings = getSettings || (() => ({}));
     this.$root = null;
+    this._loader = null;
   }
 
   open(file) {
@@ -40,22 +42,45 @@ export default class Modal {
     $(document).on('keydown.nxLooker', (e) => { if (e.key === 'Escape') this.close(); });
     $('body').append(this.$root);
 
-    const kind = file.kind || detectKind(file) || 'legacy';
-    const renderer = RENDERERS[kind] || RENDERERS.legacy;
     const $body = this.$root.find('.nx-modal__body');
+
+    // Неподдерживаемый формат → НЕ отправляем на legacy-конвертер (это слило бы
+    // любой неизвестный файл на внешний сервис), а показываем «Скачать».
+    const kind = file.kind || detectKind(file);
+    if (!kind) {
+      this._showError($body, this._tErr('unsupported'));
+      return;
+    }
+
+    this._loader = new Loader();
+    const renderer = RENDERERS[kind] || RENDERERS.legacy;
     Promise.resolve()
-      .then(() => renderer({ $, file, $body, params: this.params, settings: this.getSettings(), langs: this.langs }))
+      .then(() => renderer({
+        $, file, $body,
+        params: this.params,
+        settings: this.getSettings(),
+        langs: this.langs,
+        loader: this._loader
+      }))
       .catch((err) => {
-        $body.empty().append($('<div class="nx-modal__error"/>').text(String(err && err.message || err)));
+        if (err && err.name === 'AbortError') return;   // модалку закрыли — молча
+        const key = err && err.langKey;
+        const msg = key ? this._tErr(key, err.langParams) : this._tErr('fetch_failed');
+        this._showError($body, msg);
       });
   }
 
   close() {
+    if (this._loader) { this._loader.dispose(); this._loader = null; }
     if (this.$root) {
       this.$root.remove();
       this.$root = null;
     }
     this.$(document).off('keydown.nxLooker');
+  }
+
+  _showError($body, msg) {
+    $body.empty().append(this.$('<div class="nx-modal__error"/>').text(msg));
   }
 
   _t(key) {
@@ -70,5 +95,13 @@ export default class Modal {
       if (typeof node === 'string') return node;
     }
     return key;
+  }
+
+  // Локализованный текст ошибки с подстановкой {{param}}.
+  _tErr(langKey, params) {
+    let s = this._t('errors.' + langKey);
+    if (s === 'errors.' + langKey) s = langKey;   // нет перевода — отдаём ключ
+    if (params) for (const k of Object.keys(params)) s = s.replace('{{' + k + '}}', params[k]);
+    return s;
   }
 }

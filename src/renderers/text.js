@@ -1,14 +1,10 @@
-const MAX = 2 * 1024 * 1024;
+const MAX = 2 * 1024 * 1024;  // лимит проверяется loader'ом по реальному размеру
 
-export default function render({ $, file, $body }) {
-  return fetch(file.href, { credentials: 'same-origin' })
-    .then((r) => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const len = r.headers.get('content-length');
-      if (len && Number(len) > MAX) throw new Error('Файл слишком большой для текстового предпросмотра');
-      return r.text();
-    })
-    .then((txt) => {
-      $body.empty().append($('<pre class="nx-render-text"/>').text(txt));
-    });
+// Текст через loader: байты → декод UTF-8 → <pre>. .text() в loader не делаем,
+// чтобы единый путь (abort/limit/objectURL) жил в одном месте.
+export default function render({ $, file, $body, loader }) {
+  return loader.fetchBuffer(file.href, { maxBytes: MAX }).then(({ buf }) => {
+    const txt = new TextDecoder('utf-8').decode(buf);
+    $body.empty().append($('<pre class="nx-render-text"/>').text(txt));
+  });
 }

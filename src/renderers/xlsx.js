@@ -12,14 +12,10 @@ function ensureLib(params) {
   });
 }
 
-export default function render({ $, file, $body, params }) {
+export default function render({ $, file, $body, params, loader }) {
   return Promise.all([
     ensureLib(params),
-    fetch(file.href, { credentials: 'same-origin' }).then((r) => {
-      const len = r.headers.get('content-length');
-      if (len && Number(len) > MAX) throw new Error('XLSX больше 10 МБ — скачайте файл');
-      return r.arrayBuffer();
-    })
+    loader.fetchBuffer(file.href, { maxBytes: MAX }).then(({ buf }) => buf)
   ]).then(([XLSX, buf]) => {
     const wb = XLSX.read(buf, { type: 'array' });
     const $wrap = $('<div class="nx-render-xlsx"/>');
