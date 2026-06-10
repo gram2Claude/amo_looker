@@ -407,7 +407,7 @@
             {
               "id": "T17",
               "name": "UX-доводка: unsupported-fallback, kill-switch, состояния",
-              "description": "Решение по кейсу 8: глазик врезается на ВСЕ файлы (убрать canPreview-гейт в inject.js:80), для неподдерживаемых форматов модалка показывает errors.unsupported + кнопку «Скачать» (UX как у CatCode). Kill-switch: выключение инъекции через advanced_settings (feature-flag из спеки) — быстрый откат на проде без удаления виджета. Loading-state, все error-пути через i18n (включая рендереры), Esc/клик-вне, закрытие модалки при destroy.",
+              "description": "Решение по кейсу 8: глазик врезается на ВСЕ файлы (убрать canPreview-гейт в inject.js:80), для неподдерживаемых форматов модалка показывает errors.unsupported + кнопку «Скачать» (UX как у CatCode). Kill-switch: выключение инъекции через advanced_settings (feature-flag из спеки) — быстрый откат на проде без удаления виджета. Loading-state, все error-пути через i18n (включая рендереры), Esc/клик-вне, закрытие модалки при destroy. НАХОДКА AMO-3 (10.06): валидатор amoCRM отверг блок advanced манифеста («Title field of advanced block is not valid») — advanced_settings временно убран из manifest.json; при добавлении kill-switch вернуть локацию и подобрать корректный формат title (платный текст vs lang-key).",
               "done_criteria": "Кейсы 7, 8, 10 чек-листа зелёные; .heic даёт модалку с «Скачать»; kill-switch выключает глазики без переустановки; grep по src/ не находит сырых русских строк ошибок мимо i18n.",
               "realistic_h": 2.5,
               "pessimistic_h": 4.5,

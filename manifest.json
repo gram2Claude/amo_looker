@@ -16,11 +16,6 @@
   "locations": [
     "lcard-1",
     "ccard-1",
-    "comcard-1",
-    "advanced_settings"
-  ],
-  "advanced": {
-    "title": "widget.advanced.title",
-    "title_lang_key": "widget.advanced.title"
-  }
+    "comcard-1"
+  ]
 }
