@@ -15,7 +15,7 @@
   "sync_times_msk": ["08:00", "14:00", "17:00"],
   "project_type": "lib",
   "install_cmd": "npm ci",
-  "test_cmd": "",
+  "test_cmd": "npm test",
   "build_cmd": "npm run build",
   "run_cmd": "",
   "smoke_url": "",

@@ -1,41 +1,56 @@
 import { canPreview } from './fileUtils.js';
 
-// TODO(step-0): replace with real selectors captured from a live amoCRM lead
-// card by inspecting attachments in: chat, notes, e-mail.
-// Defensive: keep multiple selectors; the first that matches wins on a node.
-const FILE_ROW_SELECTORS = [
-  '.feed-compose-attach',
-  '.feed__item__attach',
-  '.feed-note__attach-file',
-  '.task-detail__notes-attach',
-  '.notes-wrapper [data-id]',
-  'a[href*="/download/files/"]',
-  'a[href*="drive.amocrm"]'
-];
+// Селекторы сняты с живого amoCRM (venskons78, сделка 3177663), 2026-06-10 —
+// см. work_directory/01_specs/01_dom_recon_amocrm.md.
+// Defensive: первый селектор — реальный из разведки, остальные — fallback на
+// случай иных типов лент (письма/чат) или будущих изменений вёрстки amoCRM.
 
+// Контейнер ленты — цель MutationObserver.
 const FEED_ROOT_SELECTORS = [
-  '.feed-container',
-  '.card-feed',
-  '.notes-wrapper',
-  '.linked-forms__contacts'
+  '.notes-wrapper__notes.js-notes',  // реальный (лента примечаний карточки)
+  '.js-notes',
+  '.notes-wrapper'
 ];
 
+// Строка вложения — точка инъекции глазика.
+const FILE_ROW_SELECTORS = [
+  '.feed-note__joined-attach-item',  // реальный
+  '.feed-note__joined-attach__link'  // fallback: сама ссылка, если структура иная
+];
+
+// Ссылка на файл внутри строки.
+const FILE_LINK_SELECTOR = 'a.feed-note__joined-attach__link, a[href*="/download/"], a[href*="drive-a.amocrm"], a[href*="/download/drive/"]';
+
+// На строку пишем href, под который уже вставлен глазик — устойчиво к
+// перерендеру строки (если amoCRM пересоздал ссылку с новым href, переставим).
 const INJECTED_ATTR = 'data-nx-injected';
+const RETRY_MS = 800;
 
 export default class Injector {
   constructor({ $, onEyeClick }) {
     this.$ = $;
     this.onEyeClick = onEyeClick;
     this.observer = null;
+    this._retryTimer = null;
     this._click = this._click.bind(this);
   }
 
   start() {
+    // Идемпотентность: повторный start() (init_once:false → init на каждое
+    // открытие карточки) не должен плодить наблюдатели/таймеры.
+    this._teardownObserver();
+
     const roots = this._findRoots();
     if (!roots.length) {
-      setTimeout(() => this.start(), 800);
+      // Лента ещё не отрендерилась — повтор. Хэндл сохраняем, чтобы stop()
+      // мог отменить отложенный start (иначе observer воскреснет после destroy).
+      this._retryTimer = setTimeout(() => {
+        this._retryTimer = null;
+        this.start();
+      }, RETRY_MS);
       return;
     }
+
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((m) => {
         m.addedNodes.forEach((n) => {
@@ -47,24 +62,35 @@ export default class Injector {
       this.observer.observe(root, { childList: true, subtree: true });
       this._injectInto(root);
     });
-    this.$(document).on('click.nxLooker', '.nx-eye', this._click);
+    // Делегированный клик вешаем один раз (off перед on — без дублей при restart).
+    this.$(document).off('click.nxLooker').on('click.nxLooker', '.nx-eye', this._click);
   }
 
   stop() {
-    if (this.observer) {
-      this.observer.disconnect();
-      this.observer = null;
-    }
+    this._teardownObserver();
     this.$(document).off('click.nxLooker');
     this.$('.nx-eye').remove();
     this.$(`[${INJECTED_ATTR}]`).removeAttr(INJECTED_ATTR);
   }
 
+  // Снять наблюдатель и отложенный retry, не трогая уже вставленные кнопки.
+  _teardownObserver() {
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+    if (this._retryTimer) {
+      clearTimeout(this._retryTimer);
+      this._retryTimer = null;
+    }
+  }
+
   _findRoots() {
     const found = [];
-    FEED_ROOT_SELECTORS.forEach((sel) => {
+    for (const sel of FEED_ROOT_SELECTORS) {
       this.$(sel).each(function () { found.push(this); });
-    });
+      if (found.length) break;  // первый сработавший селектор — наш
+    }
     return found;
   }
 
@@ -73,24 +99,33 @@ export default class Injector {
       const matches = node.matches && node.matches(sel)
         ? [node]
         : (node.querySelectorAll ? node.querySelectorAll(sel) : []);
-      Array.prototype.forEach.call(matches, (row) => {
-        if (row.getAttribute(INJECTED_ATTR)) return;
-        const meta = this._extractMeta(row);
-        if (!meta || !meta.href) return;
-        if (!canPreview(meta)) return;
-        row.setAttribute(INJECTED_ATTR, '1');
-        row.appendChild(this._makeButton(meta));
-      });
+      Array.prototype.forEach.call(matches, (row) => this._injectRow(row));
     });
   }
 
-  _extractMeta(row) {
-    const link = row.matches && row.matches('a') ? row : row.querySelector('a[href]');
-    if (!link) return null;
-    return {
-      href: link.href,
-      name: link.textContent.trim() || link.getAttribute('download') || 'file'
-    };
+  _injectRow(row) {
+    // Якорь дедупа — сама ССЫЛКА, а не строка: селекторы FILE_ROW_SELECTORS
+    // (контейнер + вложенная ссылка) пересекаются на одном вложении, и оба
+    // пути приходят к одной ссылке — метка на ней исключает двойную вставку.
+    const link = this._findLink(row);
+    if (!link) return;
+    const meta = { href: link.href, name: link.textContent.trim() || link.getAttribute('download') || 'file' };
+    if (!meta.href || !canPreview(meta)) return;
+
+    // Устойчиво к перерендеру: тот же href + кнопка на месте → пропуск;
+    // иначе (href сменился / кнопку снесли) — чистим и пересоздаём.
+    const host = link.parentNode || row;
+    const marked = link.getAttribute(INJECTED_ATTR);
+    const existing = host.querySelector(':scope > .nx-eye');
+    if (marked === meta.href && existing) return;
+    if (existing) existing.remove();
+
+    link.setAttribute(INJECTED_ATTR, meta.href);
+    host.appendChild(this._makeButton(meta));
+  }
+
+  _findLink(row) {
+    return row.matches && row.matches('a') ? row : row.querySelector(FILE_LINK_SELECTOR);
   }
 
   _makeButton(meta) {
