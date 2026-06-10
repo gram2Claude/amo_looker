@@ -1,0 +1,12 @@
+{
+  "plane_project_id": "abcd54db-b065-4c3e-8866-2a8b4f1bc280",
+  "plane_identifier": "AMO",
+  "state_map": {
+    "started": "41adfcde-e159-47e0-b6cd-9bed1e42a72a",
+    "completed": "0d62a76d-2f1f-4f21-8906-db65d464d5e3",
+    "unstarted": "05dde656-9763-4bba-9f38-b461ddf829a9",
+    "backlog": "930f4be1-aa10-4ba6-9d76-2c244561511c",
+    "cancelled": "af0f42bd-47ae-4787-b429-4cf7846da775"
+  },
+  "published_at": "2026-06-10T13:36:56.925Z"
+}
