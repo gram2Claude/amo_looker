@@ -39,7 +39,9 @@ export default class Modal {
     this.$root.find('.nx-modal__loading').text(this._t('modal.loading'));
     this.$root.on('click', (e) => { if (e.target === this.$root[0]) this.close(); });
     this.$root.find('.nx-modal__close').on('click', () => this.close());
-    $(document).on('keydown.nxLooker', (e) => { if (e.key === 'Escape') this.close(); });
+    // храним ссылку на конкретный handler — снимаем именно его (не чужой namespace)
+    this._onKeydown = (e) => { if (e.key === 'Escape') this.close(); };
+    $(document).on('keydown.nxLooker', this._onKeydown);
     $('body').append(this.$root);
 
     const $body = this.$root.find('.nx-modal__body');
@@ -52,7 +54,7 @@ export default class Modal {
       return;
     }
 
-    this._loader = new Loader();
+    const loader = this._loader = new Loader();
     const renderer = RENDERERS[kind] || RENDERERS.legacy;
     Promise.resolve()
       .then(() => renderer({
@@ -60,10 +62,12 @@ export default class Modal {
         params: this.params,
         settings: this.getSettings(),
         langs: this.langs,
-        loader: this._loader
+        loader
       }))
       .catch((err) => {
         if (err && err.name === 'AbortError') return;   // модалку закрыли — молча
+        // модалку успели закрыть/переоткрыть — не трогаем чужой $body
+        if (this._loader !== loader) return;
         const key = err && err.langKey;
         const msg = key ? this._tErr(key, err.langParams) : this._tErr('fetch_failed');
         this._showError($body, msg);
@@ -76,7 +80,10 @@ export default class Modal {
       this.$root.remove();
       this.$root = null;
     }
-    this.$(document).off('keydown.nxLooker');
+    if (this._onKeydown) {
+      this.$(document).off('keydown.nxLooker', this._onKeydown);
+      this._onKeydown = null;
+    }
   }
 
   _showError($body, msg) {

@@ -4,6 +4,7 @@
 set -u
 BASE="${1:-http://127.0.0.1:8094}"
 TOKEN="${TOKEN:-}"
+TMP_DOC="${TMP_DOC:-}"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0
