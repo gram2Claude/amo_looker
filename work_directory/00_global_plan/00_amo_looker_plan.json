@@ -123,11 +123,12 @@
               "estimate_h": 3.5,
               "ai_estimate_h": 0.5,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "36172ce2-1a01-4d51-96c5-bcc3f3bf57a7",
               "plane_identifier": "AMO-5",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-10"
             },
             {
               "id": "T5",
@@ -139,11 +140,12 @@
               "estimate_h": 3,
               "ai_estimate_h": 0.5,
               "task_type": "qa",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "408179d6-2262-42ea-80c0-0ad33d5f9f9c",
               "plane_identifier": "AMO-6",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-10"
             },
             {
               "id": "T21",
@@ -155,11 +157,12 @@
               "estimate_h": 3,
               "ai_estimate_h": 0.4,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "2d9e9325-b8a3-46bf-a63c-0bf5df89bd8e",
               "plane_identifier": "AMO-7",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-10"
             }
           ],
           "plane_cycle_id": "48ecf64d-791e-4394-b896-f1520b13f439"
@@ -318,11 +321,12 @@
               "estimate_h": 5.75,
               "ai_estimate_h": 0.75,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "a423c0a6-4b0c-4a84-8da8-3bc2a3343c58",
               "plane_identifier": "AMO-14",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             },
             {
               "id": "T14",
