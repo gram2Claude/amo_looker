@@ -1,6 +1,6 @@
 import pdfRender from './pdf.js';
 
-const DEFAULT_ENDPOINT = 'https://amo-conv.toolkeeper.io/convert';
+const DEFAULT_ENDPOINT = 'https://nexus-oko.naithon.one/convert';
 
 export default function render({ $, file, $body, settings }) {
   const endpoint = (settings && settings.converter_url) || DEFAULT_ENDPOINT;

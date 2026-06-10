@@ -63,7 +63,7 @@ curl -L -o vendor/xlsx.full.min.js     https://unpkg.com/xlsx@0.18.5/dist/xlsx.f
 
 ## Legacy-конвертер
 
-`src/renderers/legacy.js` шлёт байты на `https://amo-conv.toolkeeper.io/convert` (см. репо `amo-preview-converter`). Endpoint и shared-token можно переопределить через `advanced_settings` виджета.
+`src/renderers/legacy.js` шлёт байты на `https://nexus-oko.naithon.one/convert` (см. репо `amo-preview-converter`). Endpoint и shared-token можно переопределить через `advanced_settings` виджета.
 
 ## Дальше по плану
 

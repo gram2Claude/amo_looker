@@ -31,7 +31,7 @@
    та же origin-сессия пользователя, токены не нужны.
 2. **Конвертер `amo-preview-converter`** (НЕ существует) — микросервис Node/Python +
    LibreOffice headless в docker на dev-боксе `5.188.31.210`, домен
-   `amo-conv.toolkeeper.io`. Контракт: `POST /convert` (octet-stream + заголовки
+   `nexus-oko.naithon.one`. Контракт: `POST /convert` (octet-stream + заголовки
    `X-Filename`, `X-Source-Token`) → PDF. Для legacy-форматов (.doc/.xls/.ppt/.pptx/.rtf/.odt).
 3. **Сборка** — `npm run build` (`build.js`): esbuild → IIFE → AMD-обёртка
    `define(["jquery"], ...)` → копия статики → zip в `releases/`.
@@ -77,7 +77,7 @@
    (точные curl-команды в README handoff), иначе DOCX/XLSX-предпросмотр выдаст ошибку.
 3. **Конвертер legacy-форматов не существует** — поднять `amo-preview-converter`
    на dev-боксе `5.188.31.210` (docker + LibreOffice headless, nginx vhost
-   `amo-conv.toolkeeper.io`, LE-сертификат, порт 127.0.0.1:8094 — проверить свободен ли).
+   `nexus-oko.naithon.one`, LE-сертификат, порт 127.0.0.1:8094 — проверить свободен ли).
    `src/renderers/legacy.js` уже написан против контракта из plan.md.
 
 **Полный план шагов (из plan.md):**

@@ -9,7 +9,7 @@
 ## Deliverables
 
 1. **Виджет** (zip, ставится в amoCRM руками): инъекция глазика в ленту, модалка, рендереры PDF/изображения/текст/DOCX/XLSX/legacy.
-2. **Конвертер** `amo-preview-converter` (Node + LibreOffice headless, docker) на dev-боксе `5.188.31.210` под `https://amo-conv.toolkeeper.io` — для .doc/.xls/.ppt/.pptx/.rtf/.odt.
+2. **Конвертер** `amo-preview-converter` (Node + LibreOffice headless, docker) на dev-боксе `5.188.31.210` под `https://nexus-oko.naithon.one` — для .doc/.xls/.ppt/.pptx/.rtf/.odt.
 3. **Релиз на прод** toolkeeper.amocrm.ru, параллельный прогон с CatCode 3–5 дней, отключение CatCode.
 
 ## Критерии приёмки (e2e, из handoff плана — 10 проверок)
@@ -18,7 +18,7 @@
 
 ## Ограничения и зависимости
 
-- **Доступы от Михаила** (внешняя зависимость, блокирует эпоху 2 и релиз): SSH на dev-бокс, DNS `amo-conv.toolkeeper.io`, право установки виджета на прод-кабинете, скриншот глазика CatCode (для визуального разведения).
+- **Доступы от Михаила** (внешняя зависимость, блокирует эпоху 2 и релиз): SSH на dev-бокс, DNS `nexus-oko.naithon.one`, право установки виджета на прод-кабинете, скриншот глазика CatCode (для визуального разведения).
 - Разработка и QA — в кабинете `venskons78.amocrm.ru` (доступ есть, тестовая сделка 3177663 с файлами).
 - amoCRM DOM может меняться без объявления — селекторы defensive, feature-flag отключения.
 - LibreOffice-конвертер обрабатывает прод-данные клиентов: non-root контейнер, без логирования содержимого, shared secret, лимиты.

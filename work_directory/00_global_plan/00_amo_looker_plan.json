@@ -81,7 +81,7 @@
             {
               "id": "T12",
               "name": "Доступы от Михаила: SSH dev-бокс, DNS, прод-кабинет (запрос в день старта)",
-              "description": "Запросить В ДЕНЬ СТАРТА и получить до начала E2: SSH на 5.188.31.210, управление DNS для amo-conv.toolkeeper.io, право установки виджета на toolkeeper.amocrm.ru, скриншот глазика CatCode, образцы реальных КП (DOCX/XLSX) для T9/T10. ВНЕШНЯЯ ЗАВИСИМОСТЬ — блокирует E2 (Docker локально НЕ установлен, конвертер разрабатывается на dev-боксе) и T19. При задержке: E3S1 выполняется до E2, релиз v1.0 возможен без legacy (конвертер догоняет отдельным релизом).",
+              "description": "Запросить В ДЕНЬ СТАРТА и получить до начала E2: SSH на 5.188.31.210, управление DNS для nexus-oko.naithon.one, право установки виджета на toolkeeper.amocrm.ru, скриншот глазика CatCode, образцы реальных КП (DOCX/XLSX) для T9/T10. ВНЕШНЯЯ ЗАВИСИМОСТЬ — блокирует E2 (Docker локально НЕ установлен, конвертер разрабатывается на dev-боксе) и T19. При задержке: E3S1 выполняется до E2, релиз v1.0 возможен без legacy (конвертер догоняет отдельным релизом). ОБНОВЛЕНИЕ 10.06: СВОЙ сервер получен (72.56.1.123, хостер jino.ru, Ubuntu 24.04, 2 CPU/2GB/38GB, ключ установлен) — SSH от Михаила НЕ нужен. Остаётся: DNS (A-запись nexus-oko.naithon.one → 72.56.1.123 ЛИБО свой домен), право установки на прод, скриншот CatCode, образцы КП.",
               "done_criteria": "SSH-вход на dev-бокс работает; подтверждён способ заведения DNS-записи; подтверждено право установки виджета на прод; образцы КП получены.",
               "realistic_h": 0.5,
               "pessimistic_h": 2,
@@ -305,7 +305,7 @@
             {
               "id": "T13",
               "name": "amo-preview-converter: HTTP-сервис + Docker",
-              "description": "Каталог converter/ в этом репо: Node (express) сервис POST /convert (octet-stream, X-Filename, X-Source-Token) → libreoffice --headless --convert-to pdf → application/pdf; GET /health. Каждый запрос: свой tmp-каталог И свой профиль LO (-env:UserInstallation=file:///tmp/<uuid>) — иначе блокировки при конкурентности; cleanup tmp при успехе/ошибке/таймауте, kill process tree по таймауту. Dockerfile: debian-slim + libreoffice-core/writer/calc/impress + fonts-liberation, fonts-crosextra-carlito, fonts-crosextra-caladea, fonts-dejavu (метрики Times/Calibri/Arial для русских документов). docker-compose: mem_limit, cpus, pids_limit. Логи: access/error БЕЗ содержимого и имён файлов. ВНИМАНИЕ: Docker локально НЕ установлен — разработка на dev-боксе (после T12) либо поставить Docker Desktop.",
+              "description": "Каталог converter/ в этом репо: Node (express) сервис POST /convert (octet-stream, X-Filename, X-Source-Token) → libreoffice --headless --convert-to pdf → application/pdf; GET /health. Каждый запрос: свой tmp-каталог И свой профиль LO (-env:UserInstallation=file:///tmp/<uuid>) — иначе блокировки при конкурентности; cleanup tmp при успехе/ошибке/таймауте, kill process tree по таймауту. Dockerfile: debian-slim + libreoffice-core/writer/calc/impress + fonts-liberation, fonts-crosextra-carlito, fonts-crosextra-caladea, fonts-dejavu (метрики Times/Calibri/Arial для русских документов). docker-compose: mem_limit, cpus, pids_limit. Логи: access/error БЕЗ содержимого и имён файлов. ВНИМАНИЕ: Docker локально НЕ установлен — разработка на dev-боксе (после T12) либо поставить Docker Desktop. ОБНОВЛЕНИЕ 10.06: сервер конвертера — наш VPS 72.56.1.123 (jino.ru, Ubuntu 24.04, 2 CPU/1.9GB RAM, Docker НЕ установлен — поставить). Ресурсы скромные: конкурентность LibreOffice снизить 4 → 2, mem_limit контейнера ~1GB.",
               "done_criteria": "curl --data-binary @test.doc (+ заголовки) → корректный PDF с кириллицей без поплывшей вёрстки; /health → 200; tmp чистится в т.ч. при таймауте; 4 параллельных конвертации не блокируют друг друга; smoke-скрипт converter/test.sh с этими кейсами в репо.",
               "realistic_h": 3,
               "pessimistic_h": 6,
@@ -321,7 +321,7 @@
             {
               "id": "T14",
               "name": "Защита конвертера: secret, лимиты, изоляция",
-              "description": "Shared secret X-Source-Token (только из env, в git/zip не попадает), лимит 50МБ, таймаут 30с, очередь p-limit(4) + 429, OPTIONS-preflight: ответ 204 БЕЗ авторизации + Access-Control-Allow-Headers (X-Filename, X-Source-Token) — preflight браузера приходит без токена. CORS: строгий Origin-allowlist по конкретным кабинетам (venskons78.amocrm.ru, toolkeeper.amocrm.ru), не маска *.amocrm.ru. Non-root в контейнере. Модель угроз (зафиксировать в README конвертера): токен в клиентском виджете извлекаем любым пользователем кабинета — он лишь отсекает интернет-шум; реальная защита = Origin-allowlist + лимиты + изоляция. АВ-сканирование файлов — осознанно НЕ делаем в v1 (файлы своих сотрудников).",
+              "description": "Shared secret X-Source-Token (только из env, в git/zip не попадает), лимит 50МБ, таймаут 30с, очередь p-limit(2) + 429 (сервер 2 CPU/2GB), OPTIONS-preflight: ответ 204 БЕЗ авторизации + Access-Control-Allow-Headers (X-Filename, X-Source-Token) — preflight браузера приходит без токена. CORS: строгий Origin-allowlist по конкретным кабинетам (venskons78.amocrm.ru, toolkeeper.amocrm.ru), не маска *.amocrm.ru. Non-root в контейнере. Модель угроз (зафиксировать в README конвертера): токен в клиентском виджете извлекаем любым пользователем кабинета — он лишь отсекает интернет-шум; реальная защита = Origin-allowlist + лимиты + изоляция. АВ-сканирование файлов — осознанно НЕ делаем в v1 (файлы своих сотрудников).",
               "done_criteria": "Без/с неверным токеном → 401; OPTIONS без токена → 204 с нужными ACAH/ACAO; чужой Origin → отказ; файл 51МБ → 413; 5 параллельных → пятый ждёт или 429; процесс не root; e2e fetch из браузерного контекста amocrm.ru проходит preflight.",
               "realistic_h": 2,
               "pessimistic_h": 3.5,
@@ -350,7 +350,7 @@
             {
               "id": "T15",
               "name": "Деплой на dev-бокс: DNS + nginx + LE",
-              "description": "Поднять контейнер на 5.188.31.210 (порт 8094 или свободный), nginx vhost amo-conv.toolkeeper.io → 127.0.0.1:8094, сертификат Let's Encrypt, DNS A-запись. Зависит от T12.",
+              "description": "Поднять контейнер на 72.56.1.123 (наш VPS, jino.ru) (порт 8094 или свободный), nginx vhost nexus-oko.naithon.one → 127.0.0.1:8094, сертификат Let's Encrypt, DNS A-запись. Зависит от T12.",
               "done_criteria": "curl-смоук из handoff-плана зелёный (file out.pdf = PDF); converter/README.md: runbook деплоя, ротация токена, обновление LE, где смотреть логи/health.",
               "realistic_h": 2,
               "pessimistic_h": 5,
