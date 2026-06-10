@@ -187,11 +187,12 @@
               "estimate_h": 4,
               "ai_estimate_h": 0.3,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "b6c7d648-5e4d-48ab-869d-34bc60875e4b",
               "plane_identifier": "AMO-8",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             },
             {
               "id": "T7",
@@ -203,11 +204,12 @@
               "estimate_h": 2,
               "ai_estimate_h": 0.3,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "49ca0725-6c8c-4a6d-baf0-6e917dc58662",
               "plane_identifier": "AMO-9",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             },
             {
               "id": "T8",
@@ -219,11 +221,12 @@
               "estimate_h": 3.5,
               "ai_estimate_h": 0.5,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "13e6425e-acbd-40b5-b175-6705aacd264b",
               "plane_identifier": "AMO-10",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             }
           ],
           "plane_cycle_id": "646ce2af-0c0f-47b1-9199-d735359f7df3"
@@ -338,11 +341,12 @@
               "estimate_h": 3.5,
               "ai_estimate_h": 0.4,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "903da653-d745-4e10-bc2e-79f7f0e54a1a",
               "plane_identifier": "AMO-15",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             }
           ],
           "plane_cycle_id": "67680617-43f7-440b-a701-6700f3ac7b0a"
@@ -367,11 +371,12 @@
               "estimate_h": 4.5,
               "ai_estimate_h": 1,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "a8666ae7-1aa4-4270-aea5-8767d92cfe48",
               "plane_identifier": "AMO-16",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             },
             {
               "id": "T16",
@@ -383,11 +388,12 @@
               "estimate_h": 2.25,
               "ai_estimate_h": 0.3,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "548e6807-b1d5-4d70-ae6c-5744b9225795",
               "plane_identifier": "AMO-17",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             }
           ],
           "plane_cycle_id": "7ecaa4bf-fe79-4ee7-a85b-542d687a04db"
