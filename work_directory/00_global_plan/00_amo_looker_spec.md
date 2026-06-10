@@ -9,7 +9,7 @@
 ## Deliverables
 
 1. **Виджет** (zip, ставится в amoCRM руками): инъекция глазика в ленту, модалка, рендереры PDF/изображения/текст/DOCX/XLSX/legacy.
-2. **Конвертер** `amo-preview-converter` (Node + LibreOffice headless, docker) на dev-боксе `5.188.31.210` под `https://nexus-oko.naithon.one` — для .doc/.xls/.ppt/.pptx/.rtf/.odt.
+2. **Конвертер** `amo-preview-converter` (Node + LibreOffice headless, docker) на сервере `95.216.44.25` (Hetzner) под `https://nexus-oko.naithon.one` — для .doc/.xls/.ppt/.pptx/.rtf/.odt.
 3. **Релиз на прод** toolkeeper.amocrm.ru, параллельный прогон с CatCode 3–5 дней, отключение CatCode.
 
 ## Критерии приёмки (e2e, из handoff плана — 10 проверок)
