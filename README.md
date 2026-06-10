@@ -52,9 +52,12 @@ npm run build
 Положить вручную (один раз):
 
 ```bash
-curl -L -o vendor/docx-preview.min.js  https://unpkg.com/docx-preview/dist/docx-preview.min.js
-curl -L -o vendor/xlsx.full.min.js     https://unpkg.com/xlsx/dist/xlsx.full.min.js
+curl -L -o vendor/docx-preview.min.js  https://unpkg.com/docx-preview@0.3.5/dist/docx-preview.min.js
+curl -L -o vendor/jszip.min.js         https://unpkg.com/jszip@3.10.1/dist/jszip.min.js
+curl -L -o vendor/xlsx.full.min.js     https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js
 ```
+
+Версии запинены намеренно (без пина unpkg отдаёт latest). jszip — runtime-зависимость docx-preview (нужен глобальный JSZip).
 
 Они грузятся **лениво** при первом открытии docx/xlsx, поэтому отсутствие vendor/ не ломает сборку — просто эти форматы выдадут ошибку.
 

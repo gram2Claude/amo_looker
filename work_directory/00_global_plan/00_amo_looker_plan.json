@@ -232,7 +232,7 @@
             {
               "id": "T9",
               "name": "DOCX-рендерер (docx-preview) на реальных документах",
-              "description": "Рендер docx через docx-preview из vendor/. Реальные образцы КП — получены в T12 (или собственные документы со стилями/таблицами/картинками); добавить их в тестовую сделку и в work_directory/tests/fixtures/ (это входная фикстура, не результат T11). НАХОДКА AMO-2 (10.06): UMD docx-preview в AMD-окружении amoCRM вызовет anonymous define (\"Mismatched anonymous define()\") — при script-tag загрузке временно занулять window.define и восстанавливать после onload; предварительно грузить vendor/jszip.min.js (global JSZip — зависимость docx-preview).",
+              "description": "Рендер docx через docx-preview из vendor/. Реальные образцы КП — получены в T12 (или собственные документы со стилями/таблицами/картинками); добавить их в тестовую сделку и в work_directory/tests/fixtures/ (это входная фикстура, не результат T11). НАХОДКА AMO-2 (10.06): UMD docx-preview в AMD-окружении amoCRM вызовет anonymous define (\"Mismatched anonymous define()\") — при script-tag загрузке временно занулять window.define и восстанавливать после onload; предварительно грузить vendor/jszip.min.js (global JSZip — зависимость docx-preview). УТОЧНЕНИЕ РЕВЬЮ E1S1: jszip.min.js — тоже anonymous define, трюк с занулением window.define нужен и для него; рассмотреть fetch+eval с локальным шэдоуингом define (безопаснее глобального зануления — нет гонки с AMD-загрузками amo). При ручном require-smoke params не установлен → cdnBase пустой → vendor 404; подставлять params.path руками.",
               "done_criteria": "Реальный DOCX с таблицами и картинками рендерится читаемо (чек-лист п.1); плейсхолдерные фикстуры заменены настоящими.",
               "realistic_h": 1.5,
               "pessimistic_h": 3.5,
@@ -248,7 +248,7 @@
             {
               "id": "T10",
               "name": "XLSX-рендерер (SheetJS) + лимиты",
-              "description": "Рендер xlsx в HTML-таблицу с табами листов; лимит 10МБ по byteLength с сообщением too_large; реальная смета и большой файл >10МБ добавляются в тестовую сделку в этой задаче.",
+              "description": "Рендер xlsx в HTML-таблицу с табами листов; лимит 10МБ по byteLength с сообщением too_large; реальная смета и большой файл >10МБ добавляются в тестовую сделку в этой задаче. НАХОДКА РЕВЬЮ E1S1: xlsx.full.min.js — ИМЕНОВАННЫЙ define(\"xlsx\") — в AMD-окружении фабрика молча не выполнится, window.XLSX останется пустой заглушкой {} (truthy!). Guard в xlsx.js:4 `if (window.XLSX)` замаскирует проблему навсегда — менять на `window.XLSX && window.XLSX.read`. Лечение то же: зануление/шэдоуинг define на время загрузки. НАХОДКА CODEX-РЕВЬЮ E1S1: sheet_to_html → $sheet.html() — потенциальный XSS через содержимое ячеек workbook внутри страницы amoCRM; санитизировать вывод или рендерить через DOM/text nodes.",
               "done_criteria": "Реальный XLSX с несколькими листами открывается с переключением табов (чек-лист п.2); файл >10МБ даёт корректное сообщение (п.7).",
               "realistic_h": 1.5,
               "pessimistic_h": 3.5,
@@ -407,7 +407,7 @@
             {
               "id": "T17",
               "name": "UX-доводка: unsupported-fallback, kill-switch, состояния",
-              "description": "Решение по кейсу 8: глазик врезается на ВСЕ файлы (убрать canPreview-гейт в inject.js:80), для неподдерживаемых форматов модалка показывает errors.unsupported + кнопку «Скачать» (UX как у CatCode). Kill-switch: выключение инъекции через advanced_settings (feature-flag из спеки) — быстрый откат на проде без удаления виджета. Loading-state, все error-пути через i18n (включая рендереры), Esc/клик-вне, закрытие модалки при destroy. НАХОДКА AMO-3 (10.06): валидатор amoCRM отверг блок advanced манифеста («Title field of advanced block is not valid») — advanced_settings временно убран из manifest.json; при добавлении kill-switch вернуть локацию и подобрать корректный формат title (платный текст vs lang-key).",
+              "description": "Решение по кейсу 8: глазик врезается на ВСЕ файлы (убрать canPreview-гейт в inject.js:80), для неподдерживаемых форматов модалка показывает errors.unsupported + кнопку «Скачать» (UX как у CatCode). Kill-switch: выключение инъекции через advanced_settings (feature-flag из спеки) — быстрый откат на проде без удаления виджета. Loading-state, все error-пути через i18n (включая рендереры), Esc/клик-вне, закрытие модалки при destroy. НАХОДКА AMO-3 (10.06): валидатор amoCRM отверг блок advanced манифеста («Title field of advanced block is not valid») — advanced_settings временно убран из manifest.json; при добавлении kill-switch вернуть локацию и подобрать корректный формат title (платный текст vs lang-key). НАХОДКА CODEX-РЕВЬЮ E1S1: modal.js:43 fallback `|| legacy` отправляет ЛЮБОЙ неизвестный формат на внешний конвертер (утечка файла) — при правке кейса 8 заменить fallback на unsupported-сообщение, legacy только для явно распознанных legacy-расширений.",
               "done_criteria": "Кейсы 7, 8, 10 чек-листа зелёные; .heic даёт модалку с «Скачать»; kill-switch выключает глазики без переустановки; grep по src/ не находит сырых русских строк ошибок мимо i18n.",
               "realistic_h": 2.5,
               "pessimistic_h": 4.5,
