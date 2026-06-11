@@ -9,14 +9,21 @@ services:
       - "127.0.0.1:8094:8094"
     environment:
       PORT: "8094"
+      # Служебный токен (curl/мониторинг). Браузерный виджет авторизуется по Origin.
       CONVERTER_TOKEN: "${CONVERTER_TOKEN}"
       MAX_BYTES: "52428800"
       CONVERT_TIMEOUT_MS: "30000"
       CONCURRENCY: "2"
-      CORS_ORIGINS: "https://venskons78.amocrm.ru,https://toolkeeper.amocrm.ru"
+      # Публичная схема: любой кабинет amoCRM/Kommo (однометочный поддомен).
+      # Переопределяется при необходимости сузить до конкретных кабинетов.
+      ALLOWED_ORIGIN_PATTERN: "^https://[a-z0-9][a-z0-9-]{0,62}\\.(amocrm\\.(ru|com)|kommo\\.com)$"
+      RATE_LIMIT_PER_MIN: "30"        # на кабинет (Origin)
+      RATE_LIMIT_PER_MIN_IP: "60"     # на IP (ловит ротацию поддоменов)
+      MAX_RATE_KEYS: "5000"           # кап map лимитера (анти-OOM)
+      MAX_INFLIGHT: "16"              # одновременных запросов с телом (анти-RAM-DoS)
       PREVIEW_DIR: "/preview"
       PREVIEW_BASE_URL: "https://nexus-oko.naithon.one"
-      PREVIEW_TTL_MS: "900000"
+      PREVIEW_TTL_MS: "300000"        # 5 мин — окно экспозиции файла для Microsoft
       PREVIEW_MAX_BYTES: "15728640"
     # том для временных preview-файлов (их по публичному URL качает Microsoft Office viewer);
     # nginx отдаёт их через location /preview/ → /opt/nexus-preview
