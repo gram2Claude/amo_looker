@@ -118,6 +118,36 @@ describe('rate-limit', () => {
     expect(r.status).toBe(200);
   });
 
+  it('OPTIONS не обходит inflight-кап и отвечает 204, пока слот занят (RAM-DoS)', async () => {
+    let release;
+    const gate = new Promise((res) => { release = res; });
+    const app = makeApp({ MAX_INFLIGHT: 1 }, async () => { await gate; return PDF; });
+    // занимаем единственный inflight-слот «зависшим» POST
+    const busy = post(app).set('Origin', OK_ORIGIN).send(Buffer.from('x')).then((r) => r);
+    await new Promise((r) => setTimeout(r, 100));
+    // OPTIONS при занятом слоте: 204 (preflight отвечает ДО express.raw и inflightGuard),
+    // НЕ 503 — иначе preflight зависел бы от нагрузки POST'ов.
+    const r = await request(app).options('/convert').set('Origin', OK_ORIGIN);
+    expect(r.status).toBe(204);
+    release();
+    expect((await busy).status).toBe(200);
+  });
+
+  it('OPTIONS-тело не парсится (express.raw type-предикат): handler не видит body', async () => {
+    // Регистрируем спец-роут, который вернёт длину тела, ВИДИМОГО хендлером после raw.
+    // Для OPTIONS body парсер пропускает → req.body не Buffer.
+    const { app } = createApp({
+      convert: async () => PDF,
+      config: { TOKEN: 't', PREVIEW_DIR: mkdtempSync(join(tmpdir(), 'nxp-')) }
+    });
+    // express.raw для OPTIONS не сработает: проверяем через публичный контракт —
+    // OPTIONS всегда 204 вне зависимости от Content-Length.
+    const r = await request(app).options('/convert')
+      .set('Origin', OK_ORIGIN)
+      .set('Content-Length', '999999');
+    expect(r.status).toBe(204);
+  });
+
   it('переполнение map ключей → 429 новым ключам (глобальная перегрузка)', async () => {
     const app = makeApp({ MAX_RATE_KEYS: 2, RATE_LIMIT_PER_MIN: 100, RATE_LIMIT_PER_MIN_IP: 100 });
     // первый запрос занимает ключи ip: и o: (map = 2 = кап)

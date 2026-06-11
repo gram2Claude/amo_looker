@@ -3,7 +3,7 @@ import markdownit from 'markdown-it';
 const MAX = 2 * 1024 * 1024;
 
 // markdown-it инлайнится в бандл esbuild'ом (npm-зависимость): требование amoCRM
-// п. 3.2 запрещает догрузку скриптов через createElement('script').
+// п. 3.2 запрещает динамическую догрузку внешних скриптов в публичной интеграции.
 //
 // Markdown → HTML с разметкой. Безопасность: html:false (raw HTML/<script> в .md
 // НЕ исполняется, экранируется), markdown-it дефолтно фильтрует опасные ссылки

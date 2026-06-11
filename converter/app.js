@@ -135,11 +135,17 @@ export function createApp({ convert, config = {} } = {}) {
     next();
   }
 
-  app.use('/convert', requireAuth, makeRateLimit(), inflightGuard, express.raw({ type: '*/*', limit: cfg.MAX_BYTES }));
+  // Preflight отвечаем ДО body-parser. Иначе express.raw(type:'*/*') прочитал бы
+  // тело и для OPTIONS — а OPTIONS пропускается всеми гейтами (auth/лимиты/inflight),
+  // что дало бы анонимную буферизацию до MAX_BYTES в обход кап-лимитов (RAM-DoS).
   app.options('/convert', (req, res) => { applyCors(req, res); res.sendStatus(204); });
-
-  app.use('/preview-host', requireAuth, makeRateLimit({ preview: true }), inflightGuard, express.raw({ type: '*/*', limit: cfg.PREVIEW_MAX_BYTES }));
   app.options('/preview-host', (req, res) => { applyCors(req, res); res.sendStatus(204); });
+
+  // type-предикат: тело не парсим для OPTIONS даже если запрос как-то дошёл сюда
+  // (defense-in-depth к app.options выше).
+  const notPreflight = (req) => req.method !== 'OPTIONS';
+  app.use('/convert', requireAuth, makeRateLimit(), inflightGuard, express.raw({ type: notPreflight, limit: cfg.MAX_BYTES }));
+  app.use('/preview-host', requireAuth, makeRateLimit({ preview: true }), inflightGuard, express.raw({ type: notPreflight, limit: cfg.PREVIEW_MAX_BYTES }));
 
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
