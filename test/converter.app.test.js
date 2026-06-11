@@ -180,6 +180,25 @@ describe('inflight-кап (защита RAM до express.raw)', () => {
   });
 });
 
+describe('кап очереди (body не копится при обрыве)', () => {
+  it('переполнение очереди p-limit → 503 до постановки в очередь', async () => {
+    let release;
+    const gate = new Promise((res) => { release = res; });
+    // convert «висит» → активные слоты заняты, новые уходят в pendingCount
+    const app = makeApp({ MAX_INFLIGHT: 100, MAX_QUEUE: 2, CONCURRENCY: 1 }, async () => { await gate; return PDF; });
+    const live = [];
+    // 1 активный (CONCURRENCY=1) + 2 в очереди (MAX_QUEUE=2) проходят, далее 503
+    for (let i = 0; i < 3; i++) {
+      live.push(post(app).set('Origin', OK_ORIGIN).set('X-Real-IP', `1.1.1.${i}`).send(Buffer.from('x')).then((r) => r));
+    }
+    await new Promise((r) => setTimeout(r, 120));
+    const over = await post(app).set('Origin', OK_ORIGIN).set('X-Real-IP', '1.1.1.9').send(Buffer.from('x'));
+    expect(over.status).toBe(503);
+    release();
+    for (const p of live) expect((await p).status).toBe(200);
+  });
+});
+
 describe('валидация входа', () => {
   let app;
   beforeEach(() => { app = makeApp(); });

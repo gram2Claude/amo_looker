@@ -44,6 +44,10 @@ export function createApp({ convert, config = {} } = {}) {
     RATE_LIMIT_PREVIEW_PER_MIN: Number(process.env.RATE_LIMIT_PREVIEW_PER_MIN || 0) || null, // null → общий лимит
     MAX_RATE_KEYS: Number(process.env.MAX_RATE_KEYS || 5000),
     MAX_INFLIGHT:  Number(process.env.MAX_INFLIGHT || 16),
+    // Кап глубины очереди p-limit: тело уже буферизовано (до 50/15 МБ), а слот
+    // inflight освобождается на close сокета — оборванные запросы иначе копили бы
+    // body-буферы в ожидании soffice. Отклоняем 503 до постановки в очередь.
+    MAX_QUEUE: Number(process.env.MAX_QUEUE || 24),
     ...config
   };
   const originRe = new RegExp(cfg.ALLOWED_ORIGIN_PATTERN, 'i');
@@ -104,7 +108,10 @@ export function createApp({ convert, config = {} } = {}) {
     return n <= max;
   }
 
-  // ip берём из X-Real-IP (его ставит наш nginx) с фолбэком на req.ip.
+  // ip берём из X-Real-IP, который наш nginx ВСЕГДА перезаписывает на $remote_addr
+  // (proxy_set_header X-Real-IP $remote_addr) — клиентский заголовок не доверяется.
+  // Контейнер опубликован только на 127.0.0.1, прямого доступа в обход nginx нет.
+  // Фолбэк req.ip (с trust proxy) — на случай иного фронта.
   function makeRateLimit({ preview } = {}) {
     return function rateLimit(req, res, next) {
       if (req.method === 'OPTIONS') return next();   // preflight не расходует лимит
@@ -170,6 +177,9 @@ export function createApp({ convert, config = {} } = {}) {
     req.on('aborted', () => { aborted = true; });
     res.on('close', () => { aborted = true; });
 
+    // Очередь p-limit переполнена → не копим body-буфер в ожидании, отвечаем сразу.
+    if (limit.pendingCount >= cfg.MAX_QUEUE) return res.status(503).json({ error: 'busy' });
+
     try {
       const pdf = await limit(() => {
         if (aborted) throw new Error('client aborted');
@@ -205,6 +215,8 @@ export function createApp({ convert, config = {} } = {}) {
     let aborted = false;
     req.on('aborted', () => { aborted = true; });
     res.on('close', () => { aborted = true; });
+
+    if (limit.pendingCount >= cfg.MAX_QUEUE) return res.status(503).json({ error: 'busy' });
 
     try {
       // Всю тяжёлую работу (csv→xlsx конвертацию И запись на диск) гоним через тот же
