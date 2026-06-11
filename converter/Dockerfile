@@ -15,7 +15,7 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 
-COPY server.js ./
+COPY server.js app.js convert.js ./
 
 # non-root (LibreOffice печально известен RCE через сложные документы)
 RUN useradd -r -u 10001 -m -d /home/conv conv && chown -R conv:conv /app

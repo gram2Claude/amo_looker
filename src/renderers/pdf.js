@@ -6,10 +6,12 @@
 //
 // file.href может быть уже blob: URL (приходит от legacy.js после конвертации) —
 // тогда повторно не грузим, отдаём как есть.
+const MAX = 50 * 1024 * 1024;   // не грузим в RAM вкладки гигабайтные PDF
+
 export default function render({ $, file, $body, loader }) {
   const ready = (file.href || '').startsWith('blob:')
     ? Promise.resolve(file.href)
-    : loader.fetchBuffer(file.href).then(({ buf }) => loader.objectURL(buf, 'application/pdf'));
+    : loader.fetchBuffer(file.href, { maxBytes: MAX }).then(({ buf }) => loader.objectURL(buf, 'application/pdf'));
 
   return ready.then((url) => new Promise((resolve) => {
     const $iframe = $('<iframe class="nx-render-pdf"/>').attr('src', url);

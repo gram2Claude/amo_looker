@@ -59,7 +59,42 @@ async function bundleScript() {
     '});'
   ].join('\n');
 
+  guardBundle(amd);
   fs.writeFileSync(path.join(DIST, 'script.js'), amd, 'utf8');
+}
+
+// Build-guard: требования amoCRM к публичным интеграциям. Сборка падает, если
+// в бандл просочился запрещённый паттерн (например, из новой npm-зависимости).
+const FORBIDDEN_PATTERNS = [
+  [/createElement\(\s*["']script["']\s*\)/, "createElement('script') — внешние зависимости только инлайном (п. 3.2)"],
+  [/\beval\s*\(/,        'eval( — запрещён (п. 3.1.1)'],
+  [/new\s+Function\s*\(/, 'new Function( — эквивалент eval'],
+  [/\balert\s*\(/,        'alert( — запрещён (п. 3.1.1)'],
+  [/\bconfirm\s*\(/,      'confirm( — запрещён (п. 3.1.1)'],
+  [/define\.amd/,         'define.amd — живая AMD-ветка UMD-зависимости (конфликт с RequireJS amoCRM)']
+];
+
+function guardBundle(code) {
+  for (const [re, label] of FORBIDDEN_PATTERNS) {
+    const m = code.match(re);
+    if (m) {
+      const at = code.indexOf(m[0]);
+      throw new Error(`build-guard: запрещённый паттерн в бандле: ${label}\n  …${code.slice(Math.max(0, at - 80), at + 80)}…`);
+    }
+  }
+}
+
+// В zip не должно попасть ни одного минифицированного файла и каталога vendor/.
+function guardDist() {
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(dir, e.name);
+    return e.isDirectory() ? walk(p) : [p];
+  });
+  for (const f of walk(DIST)) {
+    const rel = path.relative(DIST, f);
+    if (/\.min\./.test(path.basename(f))) throw new Error('build-guard: минифицированный файл в dist: ' + rel);
+    if (rel.split(path.sep)[0] === 'vendor') throw new Error('build-guard: каталог vendor/ в dist: ' + rel);
+  }
 }
 
 function copyStatics() {
@@ -67,9 +102,6 @@ function copyStatics() {
   fs.copyFileSync(path.join(ROOT, 'style.css'),     path.join(DIST, 'style.css'));
   copyDir(path.join(ROOT, 'i18n'),    path.join(DIST, 'i18n'));
   copyDir(path.join(ROOT, 'images'),  path.join(DIST, 'images'));
-  if (fs.existsSync(path.join(ROOT, 'vendor'))) {
-    copyDir(path.join(ROOT, 'vendor'), path.join(DIST, 'vendor'));
-  }
 }
 
 function pack() {
@@ -91,6 +123,7 @@ function pack() {
   fs.mkdirSync(DIST, { recursive: true });
   await bundleScript();
   copyStatics();
+  guardDist();
   const zipPath = await pack();
   const sizeKb = (fs.statSync(zipPath).size / 1024).toFixed(1);
   console.log(`\nBuilt ${path.relative(ROOT, zipPath)} (${sizeKb} KB)`);

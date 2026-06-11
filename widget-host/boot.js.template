@@ -25,14 +25,22 @@
       var CustomWidget = window.__NXfactory($);
       var w = new CustomWidget();
       w.system = function () { return { area: 'lcard' }; };
-      w.langs = { widget: { errors: {
-        fetch_failed: 'Не удалось загрузить файл',
-        unsupported: 'Формат не поддерживается. Скачайте файл.',
-        too_large: 'Файл слишком большой (более {{limit}}). Скачайте его.',
-        converter_failed: 'Сервис конвертации недоступен.'
-      }, modal: { download: 'Скачать', close: 'Закрыть', loading: 'Загрузка предпросмотра…' } } };
+      w.langs = { widget: {
+        eye: { tooltip: 'Предпросмотр' },
+        image: { default_name: 'Изображение' },
+        errors: {
+          fetch_failed: 'Не удалось загрузить файл',
+          unsupported: 'Формат не поддерживается. Скачайте файл.',
+          too_large: 'Файл слишком большой (более {{limit}} МБ). Скачайте его.',
+          converter_failed: 'Сервис конвертации недоступен.',
+          preview_failed: 'Не удалось подготовить предпросмотр.',
+          rate_limited: 'Слишком много запросов. Подождите минуту.'
+        },
+        modal: { download: 'Скачать', close: 'Закрыть', loading: 'Загрузка предпросмотра…' }
+      } };
       w.params = { path: BASE };
-      w.get_settings = function () { return { converter_token: '{{CONVERTER_TOKEN}}' }; };
+      // Токена больше нет: конвертер пускает по Origin кабинета (см. converter/app.js).
+      w.get_settings = function () { return {}; };
       w.callbacks.render.call(w);
       w.callbacks.init.call(w);
       window.__nexusBooted = w;

@@ -111,13 +111,3 @@
 .nx-render-md th, .nx-render-md td { border: 1px solid #e3e5e8; padding: 6px 12px; }
 .nx-render-md img { max-width: 100%; }
 .nx-render-md hr { border: 0; border-top: 1px solid #e3e5e8; margin: 1.5em 0; }
-.nx-render-docx   { padding: 16px; background: #fff; }
-.nx-render-docx section { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); margin: 8px auto; padding: 24px; max-width: 800px; }
-
-.nx-render-xlsx { display: flex; flex-direction: column; height: 100%; background: #fff; }
-.nx-xlsx-tabs   { display: flex; gap: 4px; padding: 8px 12px; background: #f7f8fa; border-bottom: 1px solid #e3e5e8; overflow-x: auto; }
-.nx-xlsx-tab    { padding: 4px 12px; background: #fff; border: 1px solid #e3e5e8; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap; }
-.nx-xlsx-tab.is-active { background: #1976d2; color: #fff; border-color: #1976d2; }
-.nx-xlsx-sheet  { flex: 1; overflow: auto; padding: 8px; }
-.nx-xlsx-sheet table { border-collapse: collapse; font-size: 12px; }
-.nx-xlsx-sheet td, .nx-xlsx-sheet th { border: 1px solid #e3e5e8; padding: 4px 8px; }

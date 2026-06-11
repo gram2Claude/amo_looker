@@ -1,4 +1,5 @@
 import { detectKind } from './fileUtils.js';
+import { makeT } from './i18n.js';
 import Loader from './loader.js';
 import pdf    from './renderers/pdf.js';
 import image  from './renderers/image.js';
@@ -13,11 +14,11 @@ import legacy from './renderers/legacy.js';
 const RENDERERS = { pdf, image, text, markdown, office, legacy };
 
 export default class Modal {
-  constructor({ $, langs, params, getSettings }) {
+  constructor({ $, langs, params }) {
     this.$ = $;
     this.langs = langs || {};
     this.params = params || {};
-    this.getSettings = getSettings || (() => ({}));
+    this._tfn = makeT(this.langs);
     this.$root = null;
     this._loader = null;
   }
@@ -63,7 +64,6 @@ export default class Modal {
       .then(() => renderer({
         $, file, $body,
         params: this.params,
-        settings: this.getSettings(),
         langs: this.langs,
         loader
       }))
@@ -94,17 +94,7 @@ export default class Modal {
   }
 
   _t(key) {
-    const parts = key.split('.');
-    const roots = this.langs && this.langs.widget ? [this.langs.widget, this.langs] : [this.langs || {}];
-    for (const root of roots) {
-      let node = root;
-      for (const p of parts) {
-        if (node == null || typeof node !== 'object') { node = undefined; break; }
-        node = node[p];
-      }
-      if (typeof node === 'string') return node;
-    }
-    return key;
+    return this._tfn(key);
   }
 
   // Локализованный текст ошибки с подстановкой {{param}}.

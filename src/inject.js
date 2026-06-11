@@ -1,4 +1,5 @@
 import { canPreview } from './fileUtils.js';
+import { makeT } from './i18n.js';
 
 // Селекторы сняты с живого amoCRM (venskons78, сделка 3177663), 2026-06-10 —
 // см. work_directory/01_specs/01_dom_recon_amocrm.md.
@@ -32,9 +33,10 @@ const INJECTED_ATTR = 'data-nx-injected';
 const RETRY_MS = 800;
 
 export default class Injector {
-  constructor({ $, onEyeClick }) {
+  constructor({ $, onEyeClick, langs }) {
     this.$ = $;
     this.onEyeClick = onEyeClick;
+    this._t = makeT(langs);
     this.observer = null;
     this._retryTimer = null;
     this._onDocClick = this._onDocClick.bind(this);
@@ -146,7 +148,7 @@ export default class Injector {
   _injectImage(link) {
     if (!link || !link.href) return;
     const img = link.querySelector('img');
-    const name = (img && (img.getAttribute('alt') || img.getAttribute('title'))) || 'Изображение';
+    const name = (img && (img.getAttribute('alt') || img.getAttribute('title'))) || this._t('image.default_name', 'Image');
     const meta = { href: link.href, name, kind: 'image' };
 
     const host = link.parentNode || link;
@@ -169,7 +171,7 @@ export default class Injector {
     btn.setAttribute('data-href', meta.href);
     btn.setAttribute('data-name', meta.name);
     if (meta.kind) btn.setAttribute('data-kind', meta.kind);
-    btn.setAttribute('title', 'Предпросмотр');
+    btn.setAttribute('title', this._t('eye.tooltip', 'Preview'));
     btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
       '<path fill="currentColor" d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-2a2 2 0 100-4 2 2 0 000 4z"/>' +
       '</svg>';
