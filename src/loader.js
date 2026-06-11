@@ -72,7 +72,9 @@ export default class Loader {
   }
 }
 
+// Число мегабайт без единицы измерения: единица живёт в локализованном тексте
+// ошибки too_large («…более {{limit}} МБ» / «…over {{limit}} MB»).
 function humanSize(bytes) {
   const mb = bytes / (1024 * 1024);
-  return (Number.isInteger(mb) ? mb : mb.toFixed(0)) + ' МБ';
+  return String(Number.isInteger(mb) ? mb : Number(mb.toFixed(0)));
 }

@@ -19,8 +19,8 @@ export default function makeWidget($) {
 
       init() {
         self._area     = self.system().area;
-        self._modal    = new Modal({ $, langs: self.langs, params: self.params, getSettings: () => self.get_settings() });
-        self._injector = new Injector({ $, onEyeClick: (file) => self._modal.open(file) });
+        self._modal    = new Modal({ $, langs: self.langs, params: self.params });
+        self._injector = new Injector({ $, langs: self.langs, onEyeClick: (file) => self._modal.open(file) });
         self._injector.start();
         return true;
       },
