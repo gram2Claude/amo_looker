@@ -4,12 +4,13 @@ import pdf    from './renderers/pdf.js';
 import image  from './renderers/image.js';
 import text   from './renderers/text.js';
 import markdown from './renderers/markdown.js';
-import docx   from './renderers/docx.js';
-import xlsx   from './renderers/xlsx.js';
 import office from './renderers/office.js';
 import legacy from './renderers/legacy.js';
 
-const RENDERERS = { pdf, image, text, markdown, docx, xlsx, office, legacy };
+// docx/xlsx/pptx/csv → office (Microsoft Office viewer). Прежние клиентские
+// рендереры docx-preview/SheetJS выпилены (git-история хранит, если понадобится
+// offline-путь без Microsoft — см. 04_reviews/09).
+const RENDERERS = { pdf, image, text, markdown, office, legacy };
 
 export default class Modal {
   constructor({ $, langs, params, getSettings }) {
