@@ -1,8 +1,9 @@
 const EXT_TO_KIND = {
   pdf: 'pdf',
-  // svg НЕ предпросматриваем inline: <img src=blob:svg> исполнит встроенные
-  // скрипты/обработчики (XSS внутри страницы amoCRM) → отдаём на «Скачать».
-  jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image',
+  // svg показываем ТОЛЬКО через <img src=blob:> — в img-контексте браузер НЕ
+  // исполняет встроенные в svg скрипты/обработчики и блокирует внешние запросы,
+  // поэтому XSS-вектор закрыт. Inline-вставку (innerHTML/object/iframe) НЕ применять.
+  jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image', svg: 'image',
   txt: 'text', json: 'text', log: 'text',
   md: 'markdown', markdown: 'markdown',   // .md рендерим с разметкой (markdown-it)
   // docx/pptx/xlsx/csv → Office Online viewer (Word/PP/Excel-вид). ВНИМАНИЕ: файл уходит к Microsoft.
