@@ -4,10 +4,9 @@ const EXT_TO_KIND = {
   // скрипты/обработчики (XSS внутри страницы amoCRM) → отдаём на «Скачать».
   jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image',
   txt: 'text', json: 'text', md: 'text', log: 'text',
-  docx: 'docx',
-  // xlsx/csv → Office Online viewer (Excel-вид). ВНИМАНИЕ: файл уходит к Microsoft.
-  xlsx: 'office', csv: 'office',
-  doc: 'legacy', xls: 'legacy', ppt: 'legacy', pptx: 'legacy', rtf: 'legacy', odt: 'legacy', ods: 'legacy', odp: 'legacy'
+  // docx/pptx/xlsx/csv → Office Online viewer (Word/PP/Excel-вид). ВНИМАНИЕ: файл уходит к Microsoft.
+  docx: 'office', pptx: 'office', xlsx: 'office', csv: 'office',
+  doc: 'legacy', xls: 'legacy', ppt: 'legacy', rtf: 'legacy', odt: 'legacy', ods: 'legacy', odp: 'legacy'
 };
 
 export function extractExt(file) {
