@@ -251,11 +251,12 @@
               "estimate_h": 3.25,
               "ai_estimate_h": 0.4,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "2b947169-af62-4a19-8f42-d72e85140c02",
               "plane_identifier": "AMO-11",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             },
             {
               "id": "T10",
@@ -267,11 +268,12 @@
               "estimate_h": 3.25,
               "ai_estimate_h": 0.4,
               "task_type": "code",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "ab8fa80b-0e7b-4cef-afc3-de2e98a73619",
               "plane_identifier": "AMO-12",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             },
             {
               "id": "T11",
@@ -283,11 +285,12 @@
               "estimate_h": 3,
               "ai_estimate_h": 0.5,
               "task_type": "qa",
-              "status": "todo",
+              "status": "done",
               "plane_issue_id": "9cc4e5ac-bbc7-43db-bf40-79c7f4e13d6a",
               "plane_identifier": "AMO-13",
               "plane_linked_cycle": true,
-              "plane_linked_module": true
+              "plane_linked_module": true,
+              "done_at": "2026-06-11"
             }
           ],
           "plane_cycle_id": "9683e9c3-9c12-4e07-ada4-94781ff2a407"
