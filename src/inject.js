@@ -21,6 +21,11 @@ const FILE_ROW_SELECTORS = [
 // Ссылка на файл внутри строки.
 const FILE_LINK_SELECTOR = 'a.feed-note__joined-attach__link, a[href*="/download/"], a[href*="drive-a.amocrm"], a[href*="/download/drive/"]';
 
+// Картинки amoCRM кладёт в ленту НЕ как файл-вложение, а как inline-превью
+// (ссылка-обёртка js-image-resizer вокруг img). href ведёт на /download/drive/<uuid>
+// БЕЗ расширения — поэтому тип форсируем 'image', detectKind по href не сработал бы.
+const IMG_PREVIEW_SELECTORS = ['a.js-image-resizer', '.feed-note__media-preview a[href*="/download/"]'];
+
 // На строку пишем href, под который уже вставлен глазик — устойчиво к
 // перерендеру строки (если amoCRM пересоздал ссылку с новым href, переставим).
 const INJECTED_ATTR = 'data-nx-injected';
@@ -106,6 +111,13 @@ export default class Injector {
         : (node.querySelectorAll ? node.querySelectorAll(sel) : []);
       Array.prototype.forEach.call(matches, (row) => this._injectRow(row));
     });
+    // картинки-превью (другая разметка, тип форсируем image)
+    IMG_PREVIEW_SELECTORS.forEach((sel) => {
+      const matches = node.matches && node.matches(sel)
+        ? [node]
+        : (node.querySelectorAll ? node.querySelectorAll(sel) : []);
+      Array.prototype.forEach.call(matches, (el) => this._injectImage(el));
+    });
   }
 
   _injectRow(row) {
@@ -129,6 +141,24 @@ export default class Injector {
     host.appendChild(this._makeButton(meta));
   }
 
+  // Картинка-превью: href ведёт на изображение, тип форсируем 'image'
+  // (detectKind по href без расширения не сработал бы). Имя — из alt/title или дефолт.
+  _injectImage(link) {
+    if (!link || !link.href) return;
+    const img = link.querySelector('img');
+    const name = (img && (img.getAttribute('alt') || img.getAttribute('title'))) || 'Изображение';
+    const meta = { href: link.href, name, kind: 'image' };
+
+    const host = link.parentNode || link;
+    const marked = link.getAttribute(INJECTED_ATTR);
+    const existing = host.querySelector(':scope > .nx-eye');
+    if (marked === meta.href && existing) return;
+    if (existing) existing.remove();
+
+    link.setAttribute(INJECTED_ATTR, meta.href);
+    host.appendChild(this._makeButton(meta));
+  }
+
   _findLink(row) {
     return row.matches && row.matches('a') ? row : row.querySelector(FILE_LINK_SELECTOR);
   }
@@ -138,6 +168,7 @@ export default class Injector {
     btn.className = 'nx-eye';
     btn.setAttribute('data-href', meta.href);
     btn.setAttribute('data-name', meta.name);
+    if (meta.kind) btn.setAttribute('data-kind', meta.kind);
     btn.setAttribute('title', 'Предпросмотр');
     btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
       '<path fill="currentColor" d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-2a2 2 0 100-4 2 2 0 000 4z"/>' +
@@ -154,7 +185,8 @@ export default class Injector {
     e.stopPropagation();
     this.onEyeClick({
       href: eye.getAttribute('data-href'),
-      name: eye.getAttribute('data-name')
+      name: eye.getAttribute('data-name'),
+      kind: eye.getAttribute('data-kind') || undefined   // image для картинок-превью
     });
   }
 }
