@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Что это
 
-**Nexus Looker** — приватный виджет для amoCRM: добавляет кнопку-«глазик» рядом с каждым вложением в ленте сделки/контакта и открывает предпросмотр файла в модалке без скачивания (PDF, картинки, текст, Markdown, Office-форматы). Две части: **виджет** (клиентский JS, грузится в страницу amoCRM) и **converter/** — отдельный серверный сервис (Express в Docker) для форматов, которые в браузере не отрендерить.
+**Nexus Looker** — виджет для amoCRM (готовится к публикации в маркетплейсе, см. `public_integration/`): добавляет кнопку-«глазик» рядом с каждым вложением в ленте сделки/контакта и открывает предпросмотр файла в модалке без скачивания (PDF, картинки, текст, Markdown, Office-форматы). Две части: **виджет** (клиентский JS, грузится в страницу amoCRM) и **converter/** — отдельный серверный сервис (Express в Docker) для форматов, которые в браузере не отрендерить.
 
 ## Команды
 
@@ -18,7 +18,8 @@ npx vitest run test/inject.test.js          # один файл тестов
 npx vitest run -t "клик по глазику"          # один тест по названию
 
 # Конвертер (Node, разворачивается в Docker):
-node -c converter/server.js                  # быстрая проверка синтаксиса
+node -c converter/app.js                     # быстрая проверка синтаксиса
+npx vitest run test/converter.app.test.js    # тесты auth/лимитов (supertest + DI-мок convert)
 cd converter && docker compose --env-file .env up -d --build   # сборка/перезапуск (на сервере)
 ```
 
@@ -30,23 +31,24 @@ cd converter && docker compose --env-file .env up -d --build   # сборка/п
 
 **Сборка борется с RequireJS amoCRM.** `build.js` собирает `src/` через esbuild в IIFE (`globalName: NXLooker`), затем **оборачивает в `define(["jquery"], function($){ ... return NXLooker.default($); })`** — иначе RequireJS amoCRM не увидит виджет. Entry — `src/script.js` (экспортит фабрику amoCRM CustomWidget с колбэками render/init).
 
-**`src/vendorLoader.js` зануляет `window.define` на время загрузки vendor-скриптов.** Vendor-библиотеки (markdown-it и т.п.) — UMD с anonymous `define`, который RequireJS перехватывает и ломает («Mismatched anonymous define»). vendorLoader временно прячет `window.define`, грузит скрипт тегом, восстанавливает define. Загрузки **сериализованы** (общая цепочка промисов) с таймаутом и guard'ом позднего onload — не трогать эту логику наугад.
+**Все зависимости инлайнятся в бандл** (markdown-it — npm-зависимость, esbuild её встраивает). Догрузка скриптов через `createElement('script')` ЗАПРЕЩЕНА требованиями amoCRM к публичным интеграциям (п. 3.2) — прежний vendorLoader выпилен. `build.js` содержит **build-guard**: сборка падает, если в бандле появились `createElement('script')`, `eval(`, `new Function`, `alert(`, `confirm(`, `define.amd`, либо в dist попали `*.min.*`-файлы или `vendor/`.
 
 **Поток данных при клике на глазик:**
 1. `src/inject.js` — MutationObserver на ленте (`.notes-wrapper__notes.js-notes`), врезает глазик в строки вложений И в картинки-превью (`js-image-resizer` — отдельная разметка amoCRM, href без расширения → kind форсируется `image`). Клик ловится **нативным listener на `document` в фазе capture** (amoCRM глушит bubble-фазу `stopPropagation`'ом — jQuery-делегирование клик не получало).
 2. `src/modal.js` — открывает модалку, по `kind` (из `fileUtils.detectKind` или `data-kind`) выбирает рендерер из `RENDERERS`, создаёт `Loader` на open и `dispose()` на close (с защитой от гонки переоткрытия: `this._loader !== loader`).
 3. `src/loader.js` — единый fetch-слой: **`credentials: 'same-origin'`** (обязательно — `include` ломает CORS-редирект amo→drive→S3), AbortController, трекинг и revoke `objectURL`, ошибки с `langKey` для i18n.
-4. `src/renderers/*` — один файл на тип, контракт `({ $, file, $body, params, settings, loader, langs }) => Promise`.
+4. `src/renderers/*` — один файл на тип, контракт `({ $, file, $body, params, loader, langs }) => Promise`. Эндпоинты конвертера — константы модулей (`office.js`, `legacy.js`); токенов и settings-оверрайдов в клиенте нет (публичный zip — не место для секретов).
 
 **Граница приватности рендереров (важное продуктовое решение):**
 - **Уходят на серверы Microsoft** (Office Online viewer через серверный `/preview-host`): `office.js` для **docx, pptx, xlsx, csv**.
 - **Рендерятся локально, никуда не уходят:** `pdf.js` (blob→iframe), `image.js` (blob→`<img>`, включая **svg** — скрипты в svg НЕ исполняются в `<img>`), `text.js`, `markdown.js` (markdown-it с `html:false`), `legacy.js` (.doc/.xls/.ppt → свой конвертер LibreOffice→PDF).
 - `fileUtils.js` (`EXT_TO_KIND`) — единственный источник маппинга расширение→рендерер. Менять поведение формата здесь.
 
-**converter/ — отдельный сервис.** `server.js` (Express, Docker, за nginx `https://nexus-oko.naithon.one`):
+**converter/ — отдельный сервис** (Docker, за nginx `https://nexus-oko.naithon.one`). `app.js` — фабрика `createApp({ convert })` (DI для тестов), `server.js` — entry (listen + TTL-уборка), `convert.js` — LibreOffice:
 - `POST /convert` — legacy Office → PDF через LibreOffice headless (per-request профиль, kill process-tree по таймауту/abort, p-limit).
-- `POST /preview-host` — временно публикует файл под uuid-URL (TTL), откуда его качает Microsoft viewer; csv конвертит в xlsx. `requireToken` middleware стоит ДО `express.raw` (тело не буферизуется без токена).
-- Аутентификация — shared-token (`timingSafeEqual`); токен светится в клиенте осознанно, реальная защита — Origin-allowlist + лимиты. Конфиг nginx/compose — в `converter/deploy/`.
+- `POST /preview-host` — временно публикует файл под uuid-URL (TTL 5 мин), откуда его качает Microsoft viewer; csv конвертит в xlsx.
+- **Аутентификация публичная**: Origin кабинета amoCRM/Kommo (однометочный поддомен, `ALLOWED_ORIGIN_PATTERN`) ИЛИ служебный `X-Source-Token` (`timingSafeEqual`). `requireAuth` стоит ДО `express.raw` (тело не буферизуется без auth) — этот инвариант не ломать.
+- **Эшелон лимитов** (Origin подделывается из curl — принятый риск, спека §8): глобальный `MAX_INFLIGHT` (503 до буферизации), rate-limit 60-сек окно по двум ключам origin+ip (ip — из `X-Real-IP` nginx), nginx `limit_req`. Конфиг nginx/compose — в `converter/deploy/`.
 
 ## Тесты
 

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nexus Looker — Privacy Policy</title>
+<style>
+  body { font: 16px/1.6 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #2b323a; max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 1.6em; } h2 { font-size: 1.2em; margin-top: 1.6em; }
+  .muted { color: #6b7480; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>Nexus Looker Widget Privacy Policy</h1>
+<p class="muted">Last updated: {{POLICY_DATE}}</p>
+
+<p>This policy describes what data the Nexus Looker widget (the "Widget") processes
+and what happens to it. The Widget is developed and maintained by {{COMPANY_NAME}}
+(the "Developer").</p>
+
+<h2>1. What the Widget does</h2>
+<p>The Widget adds a preview button next to file attachments in the CRM interface
+and shows the file content in a modal window without downloading.</p>
+
+<h2>2. What data is processed</h2>
+<ul>
+  <li><b>Attachment file content</b> — only for files the user explicitly clicked
+      the preview button for. The Widget never processes files in the background.</li>
+  <li><b>Technical request data</b> sent to the Developer's server (IP address,
+      account address in the Origin header) — to the minimum extent required to
+      protect the service from abuse (rate limiting).</li>
+</ul>
+<p>The Widget does not collect or store CRM customers' personal data and does not
+read leads, contacts, conversations or any CRM data other than the file the user opened.</p>
+
+<h2>3. Where files go during preview</h2>
+<ul>
+  <li><b>PDF, images (including SVG), plain text, Markdown</b> — processed entirely
+      in the user's browser. Never transmitted anywhere.</li>
+  <li><b>Legacy Office formats (.doc, .xls, .ppt, .rtf, .odt)</b> — sent to the
+      Developer's server, converted to PDF and immediately returned to the browser.
+      The file is not stored; file contents and names are not logged.</li>
+  <li><b>Modern Office formats (.docx, .pptx, .xlsx, .csv)</b> — rendered with
+      Microsoft Office Online Viewer. The file is sent to the Developer's server and
+      temporarily (no longer than 5 minutes) published at an unguessable one-time URL
+      from which the Microsoft service fetches it. After that the file is deleted
+      automatically. Microsoft's processing is governed by the
+      <a href="https://privacy.microsoft.com/privacystatement" rel="noopener">Microsoft Privacy Statement</a>.</li>
+</ul>
+
+<h2>4. Storage and logging</h2>
+<p>The Developer's server does not keep files longer than needed for conversion or
+preview (at most 5 minutes for Office formats). File contents are never logged.
+Server logs are limited to data required for reliability and abuse protection.</p>
+
+<h2>5. Third parties</h2>
+<p>The only third party that receives file content is Microsoft (only for
+.docx, .pptx, .xlsx, .csv — see section 3). Data is never sold or shared with anyone else.</p>
+
+<h2>6. Contact</h2>
+<p>For data processing questions contact <a href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a>.</p>
+<p class="muted">{{COMPANY_NAME}}, {{COMPANY_REQUISITES}}</p>
+</body>
+</html>

@@ -1,70 +1,62 @@
 # Nexus Looker — amoCRM widget
 
-Собственный виджет «глазик» для amoCRM (замена CatCode Looker). Добавляет рядом с каждым файлом в чате/примечаниях/письмах кнопку предпросмотра — открывает модалку без скачивания файла.
+Виджет «глазик» для amoCRM: рядом с каждым файлом в примечаниях/чате/письмах появляется
+кнопка предпросмотра — файл открывается в модалке без скачивания.
+Готовится публикация в маркетплейсе amoCRM — спецификация и материалы в `public_integration/`.
 
 ## Поддерживаемые форматы
 
-| Формат                                | Renderer        | Реализация                     |
-|---------------------------------------|------------------|--------------------------------|
-| PDF                                   | `pdf.js`        | `<iframe>` (нативный браузер)  |
-| jpg / png / gif / webp / svg          | `image.js`      | `<img>`                        |
-| txt / csv / json / md / log           | `text.js`       | `<pre>`                        |
-| docx                                  | `docx.js`       | docx-preview (vendor/)         |
-| xlsx                                  | `xlsx.js`       | SheetJS Community (vendor/)    |
-| doc / xls / ppt / pptx / rtf / odt    | `legacy.js`     | бэк-конвертер (LibreOffice) → PDF |
+| Формат                          | Renderer      | Реализация                                          |
+|---------------------------------|---------------|-----------------------------------------------------|
+| PDF                             | `pdf.js`      | blob → `<iframe>` (нативный браузер)                |
+| jpg / png / gif / webp / svg    | `image.js`    | blob → `<img>` (скрипты в svg не исполняются)       |
+| txt / json / log                | `text.js`     | `<pre>` через `.text()`                             |
+| md                              | `markdown.js` | markdown-it (`html:false`), инлайн в бандле         |
+| docx / pptx / xlsx / csv        | `office.js`   | Microsoft Office viewer через наш `/preview-host` ⚠️ файл уходит к Microsoft |
+| doc / xls / ppt / rtf / odt     | `legacy.js`   | наш конвертер (LibreOffice headless) → PDF          |
+
+Маппинг расширение→рендерер — единственный источник: `src/fileUtils.js` (`EXT_TO_KIND`).
 
 ## Структура
 
 ```
-manifest.json     # объявление виджета для amoCRM
-style.css         # стили глазика и модалки
-i18n/             # ru.json, en.json
-images/           # 5 PNG-логотипов (заглушки, нужны нормальные)
+manifest.json     # объявление виджета (widget/locations/settings); ЗДЕСЬ задаётся версия
+style.css         # стили глазика и модалки (всё под префиксом .nx-)
+i18n/             # ru.json, en.json (парные ключи)
+images/           # 5 PNG-логотипов по размерам amoCRM
 src/              # ES-модули
-  script.js       # entry point
-  inject.js       # MutationObserver + врезка глазика
+  script.js       # entry: фабрика amoCRM CustomWidget
+  inject.js       # MutationObserver + врезка глазика (клик — capture на document)
   modal.js        # модалка-вьювер
+  loader.js       # fetch-слой: same-origin, AbortController, objectURL-трекинг
+  i18n.js         # makeT — lookup переводов
   fileUtils.js    # detect kind by extension
-  renderers/      # один файл на формат
-vendor/           # минифайды docx-preview, SheetJS (положить руками)
-build.js          # сборка → dist/ → releases/nexus-looker-X.Y.Z.zip
+  renderers/      # один файл на тип
+converter/        # серверный сервис (Express в Docker, nginx, Hetzner)
+  app.js          # фабрика createApp({convert}) — auth (Origin/токен), лимиты, эндпоинты
+  server.js       # entry: listen + TTL-уборка preview-файлов
+  convert.js      # LibreOffice headless (kill process-tree, per-request профиль)
+  deploy/         # nginx vhost, compose, заметки деплоя
+build.js          # esbuild → AMD define(["jquery"]) → dist/ → releases/*.zip + build-guard
+public_integration/  # спека, план, материалы маркетплейса (политика, описания, тур, чек-лист)
+widget-host/      # boot.js для ручного теста букмарклетом на техническом аккаунте
 ```
 
-## Сборка
+## Сборка и тесты
 
 ```bash
 npm install
-npm run build
+npm test            # vitest: виджет (jsdom) + конвертер (supertest, без LibreOffice)
+npm run build       # → releases/nexus-looker-<version>.zip (версия из manifest.json)
 ```
 
-Получаем `releases/nexus-looker-0.1.0.zip` — это и есть архив для загрузки в amoCRM.
+Build-guard валит сборку, если в бандле появились запрещённые для публичных
+интеграций паттерны (`createElement('script')`, `eval`, `alert`, …) или в dist
+попали минифицированные файлы.
 
-## Установка (приватный виджет)
+## Конвертер (сервер)
 
-1. toolkeeper.amocrm.ru → **Настройки → Интеграции → Создать интеграцию**
-2. Выбрать «Загрузить виджет», прикрепить `releases/nexus-looker-*.zip`
-3. Подтвердить установку
-
-Обновление: bump `version` в `manifest.json` → `npm run build` → переустановить zip через тот же интерфейс.
-
-## Vendor-библиотеки
-
-Положить вручную (один раз):
-
-```bash
-curl -L -o vendor/docx-preview.min.js  https://unpkg.com/docx-preview@0.3.5/dist/docx-preview.min.js
-curl -L -o vendor/jszip.min.js         https://unpkg.com/jszip@3.10.1/dist/jszip.min.js
-curl -L -o vendor/xlsx.full.min.js     https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js
-```
-
-Версии запинены намеренно (без пина unpkg отдаёт latest). jszip — runtime-зависимость docx-preview (нужен глобальный JSZip).
-
-Они грузятся **лениво** при первом открытии docx/xlsx, поэтому отсутствие vendor/ не ломает сборку — просто эти форматы выдадут ошибку.
-
-## Legacy-конвертер
-
-`src/renderers/legacy.js` шлёт байты на `https://nexus-oko.naithon.one/convert` (см. репо `amo-preview-converter`). Endpoint и shared-token можно переопределить через `advanced_settings` виджета.
-
-## Дальше по плану
-
-См. `/Users/foringella/.claude/plans/fluffy-tumbling-sloth.md` — шаги 2 (DOM-инъекция со снапшота реального amoCRM), 5 (конвертер), 6–8 (доводка, релиз, отключение CatCode).
+`https://nexus-oko.naithon.one` — `/convert` (legacy→PDF), `/preview-host` (Office viewer),
+`/widget/` (статика для букмарклета), `/preview/` (короткоживущие uuid-файлы, TTL 5 мин).
+Авторизация: Origin кабинета amoCRM/Kommo или служебный токен; эшелон лимитов
+(inflight-кап, rate-limit origin+ip, nginx limit_req). Детали — `converter/app.js` и CLAUDE.md.
