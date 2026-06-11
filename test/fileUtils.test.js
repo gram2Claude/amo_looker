@@ -20,6 +20,7 @@ describe('detectKind', () => {
     expect(detectKind({ name: 'a.jpg' })).toBe('image');
     expect(detectKind({ name: 'a.png' })).toBe('image');
     expect(detectKind({ name: 'a.txt' })).toBe('text');
+    expect(detectKind({ name: 'a.md' })).toBe('markdown');
     expect(detectKind({ name: 'a.docx' })).toBe('office');
     expect(detectKind({ name: 'a.pptx' })).toBe('office');
     expect(detectKind({ name: 'a.xlsx' })).toBe('office');
@@ -32,9 +33,9 @@ describe('detectKind', () => {
     expect(detectKind({ name: 'photo.heic' })).toBe(null);
     expect(detectKind({ name: 'archive.zip' })).toBe(null);
   });
-  it('svg исключён из image (XSS) → не предпросматривается', () => {
-    expect(detectKind({ name: 'icon.svg' })).toBe(null);
-    expect(canPreview({ name: 'icon.svg' })).toBe(false);
+  it('svg предпросматривается как image (через <img>, скрипты не исполняются)', () => {
+    expect(detectKind({ name: 'icon.svg' })).toBe('image');
+    expect(canPreview({ name: 'icon.svg' })).toBe(true);
   });
 });
 
