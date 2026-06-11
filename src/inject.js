@@ -32,7 +32,7 @@ export default class Injector {
     this.onEyeClick = onEyeClick;
     this.observer = null;
     this._retryTimer = null;
-    this._click = this._click.bind(this);
+    this._onDocClick = this._onDocClick.bind(this);
   }
 
   start() {
@@ -62,13 +62,18 @@ export default class Injector {
       this.observer.observe(root, { childList: true, subtree: true });
       this._injectInto(root);
     });
-    // Делегированный клик вешаем один раз (off перед on — без дублей при restart).
-    this.$(document).off('click.nxLooker').on('click.nxLooker', '.nx-eye', this._click);
+    // Клик ловим НАТИВНЫМ листенером на document в фазе CAPTURE (true), а не
+    // jQuery-делегированием в bubble: лента amoCRM глушит всплытие клика
+    // (stopPropagation в своих обработчиках), и событие до document в bubble
+    // не доходит — глазик «не нажимался». Capture идёт сверху вниз ДО bubble,
+    // поэтому перехватываем клик раньше глушилки. removeEventListener в stop().
+    document.removeEventListener('click', this._onDocClick, true);
+    document.addEventListener('click', this._onDocClick, true);
   }
 
   stop() {
     this._teardownObserver();
-    this.$(document).off('click.nxLooker');
+    document.removeEventListener('click', this._onDocClick, true);
     this.$('.nx-eye').remove();
     this.$(`[${INJECTED_ATTR}]`).removeAttr(INJECTED_ATTR);
   }
@@ -140,13 +145,16 @@ export default class Injector {
     return btn;
   }
 
-  _click(e) {
+  // Нативный делегированный обработчик (capture). target может быть svg/path
+  // внутри глазика → closest('.nx-eye') находит сам глазик.
+  _onDocClick(e) {
+    const eye = e.target && e.target.closest ? e.target.closest('.nx-eye') : null;
+    if (!eye) return;
     e.preventDefault();
     e.stopPropagation();
-    const $btn = this.$(e.currentTarget);
     this.onEyeClick({
-      href: $btn.data('href'),
-      name: $btn.data('name')
+      href: eye.getAttribute('data-href'),
+      name: eye.getAttribute('data-name')
     });
   }
 }
