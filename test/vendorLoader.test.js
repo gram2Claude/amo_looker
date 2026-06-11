@@ -81,4 +81,27 @@ describe('loadVendorScripts', () => {
     await assertion;
     expect(window.define).toBe(saved);              // define вернулся, RequireJS amo не сломан
   });
+
+  it('запоздавший onload после таймаута НЕ грузит следующий скрипт (codex P1)', async () => {
+    vi.useFakeTimers();
+    const saved = window.define;
+    const appended = [];
+    let firstEl = null;
+    const orig = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+      if (tag !== 'script') return orig(tag);
+      const el = orig('script'); el.remove = () => {};
+      Object.defineProperty(el, 'src', { set(v) { this._src = v; appended.push(v); if (!firstEl) firstEl = this; }, get() { return this._src; } });
+      return el;
+    });
+    vi.spyOn(document.head, 'appendChild').mockImplementation((el) => el);
+    const p = loadVendorScripts(['/hang.js', '/next.js']);
+    const assertion = expect(p).rejects.toThrow(/timeout/);
+    await vi.advanceTimersByTimeAsync(20001);   // первый скрипт уходит в timeout
+    await assertion;
+    // запоздалый onload первого скрипта (handlers занулены — должен быть no-op)
+    expect(firstEl.onload).toBeNull();
+    expect(appended).toEqual(['/hang.js']);     // '/next.js' НЕ загружался
+    expect(window.define).toBe(saved);
+  });
 });

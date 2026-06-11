@@ -42,13 +42,16 @@ function _loadSequential(srcs) {
     let i = 0, settled = false;
     const finish = (fn, arg) => { if (settled) return; settled = true; restoreDefine(); fn(arg); };
     const next = () => {
+      if (settled) return;                         // после timeout/ошибки не продолжаем цепочку
       if (i >= srcs.length) { finish(resolve); return; }
       const src = srcs[i++];
       const s = document.createElement('script');
-      const timer = setTimeout(() => { s.remove(); finish(reject, new Error('vendor load timeout: ' + src)); }, SCRIPT_TIMEOUT_MS);
+      // запоздавший onload после timeout НЕ должен грузить следующий скрипт уже
+      // при видимом define (иначе RequireJS перехватит UMD) — гасим handlers и guard settled.
+      const timer = setTimeout(() => { s.onload = s.onerror = null; s.remove(); finish(reject, new Error('vendor load timeout: ' + src)); }, SCRIPT_TIMEOUT_MS);
+      s.onload = () => { if (settled) return; clearTimeout(timer); next(); };
+      s.onerror = () => { if (settled) return; clearTimeout(timer); s.remove(); finish(reject, new Error('vendor load failed: ' + src)); };
       s.src = src;
-      s.onload = () => { clearTimeout(timer); next(); };
-      s.onerror = () => { clearTimeout(timer); s.remove(); finish(reject, new Error('vendor load failed: ' + src)); };
       document.head.appendChild(s);
     };
     next();
