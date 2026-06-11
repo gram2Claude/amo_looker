@@ -33,6 +33,8 @@ export default function render({ $, file, $body, params, loader }) {
     container.innerHTML = md.render(text);
     // ссылки — в новой вкладке, безопасный rel
     container.querySelectorAll('a[href]').forEach((a) => { a.target = '_blank'; a.rel = 'noopener noreferrer'; });
+    // внешние картинки в .md (![](url)) не должны утекать origin/referrer кабинета amoCRM
+    container.querySelectorAll('img').forEach((img) => { img.referrerPolicy = 'no-referrer'; img.loading = 'lazy'; });
     $body.empty().append(container);
   });
 }

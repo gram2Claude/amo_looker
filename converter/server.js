@@ -45,7 +45,15 @@ const limit = pLimit(CONCURRENCY);
 const app = express();
 app.disable('x-powered-by');
 
-app.use('/convert', express.raw({ type: '*/*', limit: MAX_BYTES }));
+// Токен-гейт ДО body-parser: без валидного токена не буферизуем тело (до 50/15 МБ
+// в RAM на запрос) — закрывает дешёвый DoS по памяти. Preflight (OPTIONS) без токена — пропускаем.
+function requireToken(req, res, next) {
+  if (req.method === 'OPTIONS') return next();
+  if (!tokenOk(req.get('X-Source-Token'))) { applyCors(req, res); return res.status(401).json({ error: 'unauthorized' }); }
+  next();
+}
+
+app.use('/convert', requireToken, express.raw({ type: '*/*', limit: MAX_BYTES }));
 
 function applyCors(req, res) {
   const origin = req.headers.origin;
@@ -110,7 +118,8 @@ app.post('/convert', async (req, res) => {
 });
 
 // --- Office Online preview: принять файл, временно опубликовать, вернуть URL ---
-app.use('/preview-host', express.raw({ type: '*/*', limit: PREVIEW_MAX_BYTES }));
+// requireToken ДО raw: без токена тело не буферизуется (защита RAM от DoS).
+app.use('/preview-host', requireToken, express.raw({ type: '*/*', limit: PREVIEW_MAX_BYTES }));
 app.options('/preview-host', (req, res) => { applyCors(req, res); res.sendStatus(204); });
 
 app.post('/preview-host', async (req, res) => {
@@ -131,17 +140,23 @@ app.post('/preview-host', async (req, res) => {
   res.on('close', () => { aborted = true; });
 
   try {
-    let data = body, outExt = ext;
-    if (ext === 'csv') {
-      // Office viewer не открывает csv → конвертируем в xlsx через LibreOffice
-      data = await limit(() => { if (aborted) throw new Error('aborted'); return convert(body, 'csv', () => aborted, 'xlsx'); });
-      outExt = 'xlsx';
-    }
+    // Всю тяжёлую работу (csv→xlsx конвертацию И запись на диск) гоним через тот же
+    // p-limit(CONCURRENCY), что и /convert — иначе всплеск запросов с валидным токеном
+    // (а он есть у каждого клиента) положил бы диск/IO неограниченным параллелизмом.
+    const result = await limit(async () => {
+      if (aborted) throw new Error('aborted');
+      let data = body, outExt = ext;
+      if (ext === 'csv') {              // Office viewer не открывает csv → конвертируем в xlsx
+        data = await convert(body, 'csv', () => aborted, 'xlsx');
+        outExt = 'xlsx';
+      }
+      await mkdir(PREVIEW_DIR, { recursive: true });
+      const name = randomUUID() + '.' + outExt;   // непредсказуемое имя (uuid v4); TTL чистит
+      await writeFile(join(PREVIEW_DIR, name), data);
+      return name;
+    });
     if (aborted) return;
-    await mkdir(PREVIEW_DIR, { recursive: true });
-    const name = randomUUID() + '.' + outExt;   // непредсказуемое имя; TTL чистит
-    await writeFile(join(PREVIEW_DIR, name), data);
-    res.json({ url: PREVIEW_BASE_URL + '/preview/' + name, ttl_ms: PREVIEW_TTL_MS });
+    res.json({ url: PREVIEW_BASE_URL + '/preview/' + result, ttl_ms: PREVIEW_TTL_MS });
   } catch (err) {
     if (aborted) return;
     console.error('[preview-host] failed:', String(err && err.code || err && err.message || 'error'));
@@ -149,7 +164,8 @@ app.post('/preview-host', async (req, res) => {
   }
 });
 
-// TTL-очистка временных preview-файлов (ушедших к Microsoft) — каждые 5 минут.
+// TTL-очистка временных preview-файлов (ушедших к Microsoft) — каждую минуту
+// (окно экспозиции = TTL; чаще уборка → меньше «хвост» при всплеске загрузок).
 setInterval(async () => {
   try {
     const now = Date.now();
@@ -160,7 +176,7 @@ setInterval(async () => {
       if (s && (now - s.mtimeMs) > PREVIEW_TTL_MS) await unlink(p).catch(() => {});
     }
   } catch (e) { /* noop */ }
-}, 5 * 60 * 1000);
+}, 60 * 1000);
 
 // Одна конвертация: свой tmp + свой профиль LibreOffice (иначе блокировки при
 // конкурентности), kill process tree по таймауту/abort, гарантированный cleanup.
