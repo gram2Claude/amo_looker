@@ -1,0 +1,47 @@
+/* Nexus Looker — boot-активатор для ручного теста на техническом аккаунте.
+   Грузится букмарклетом; перехватывает define, поднимает виджет на текущей карточке. */
+(function () {
+  var BASE = 'https://nexus-oko.naithon.one/widget';
+  // повторный клик — снять прошлый инстанс
+  if (window.__nexusBooted) {
+    try { window.__nexusBooted.callbacks.destroy(); } catch (e) {}
+    window.__nexusBooted = null;
+  }
+  if (!document.getElementById('nx-boot-style')) {
+    var l = document.createElement('link');
+    l.id = 'nx-boot-style'; l.rel = 'stylesheet'; l.href = BASE + '/style.css';
+    document.head.appendChild(l);
+  }
+  var savedDefine = window.define;
+  window.__NXfactory = null;
+  window.define = function (deps, factory) { window.__NXfactory = factory; };
+  window.define.amd = true;
+  var s = document.createElement('script');
+  s.src = BASE + '/script.js?' + Date.now();
+  s.onload = function () {
+    window.define = savedDefine;
+    try {
+      var $ = window.jQuery || window.$;
+      var CustomWidget = window.__NXfactory($);
+      var w = new CustomWidget();
+      w.system = function () { return { area: 'lcard' }; };
+      w.langs = { widget: { errors: {
+        fetch_failed: 'Не удалось загрузить файл',
+        unsupported: 'Формат не поддерживается. Скачайте файл.',
+        too_large: 'Файл слишком большой (более {{limit}}). Скачайте его.',
+        converter_failed: 'Сервис конвертации недоступен.'
+      }, modal: { download: 'Скачать', close: 'Закрыть', loading: 'Загрузка предпросмотра…' } } };
+      w.params = { path: BASE };
+      w.get_settings = function () { return { converter_token: '{{CONVERTER_TOKEN}}' }; };
+      w.callbacks.render.call(w);
+      w.callbacks.init.call(w);
+      window.__nexusBooted = w;
+      console.log('[Nexus Looker] активирован: глазики у файлов в ленте');
+    } catch (e) {
+      window.define = savedDefine;
+      alert('Nexus Looker: ошибка активации — ' + e.message);
+    }
+  };
+  s.onerror = function () { window.define = savedDefine; alert('Nexus Looker: не удалось загрузить script.js'); };
+  document.body.appendChild(s);
+})();
