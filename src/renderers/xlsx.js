@@ -1,6 +1,8 @@
 import { loadVendorScripts } from '../vendorLoader.js';
 
 const MAX = 10 * 1024 * 1024;
+const MAX_ROWS = 2000;   // кап рендера: распакованный лист из 10МБ-архива может дать
+                         // миллионы ячеек и заморозить вкладку синхронным построением DOM
 
 // SheetJS — NAMED define("xlsx"): без зануления define (vendorLoader) RequireJS
 // оставит window.XLSX пустой заглушкой {}. Guard проверяет именно .read, а не
@@ -23,7 +25,9 @@ function ensureLib(params) {
 // содержимое ячеек книги может содержать HTML/скрипты → XSS внутри страницы
 // amoCRM. .text()/textContent экранирует — безопасно.
 function renderSheet($, XLSX, sheet) {
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, defval: '' });
+  const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, defval: '' });
+  const rows = allRows.slice(0, MAX_ROWS);
+  const $wrap = $('<div/>');
   const $table = $('<table/>');
   rows.forEach((row) => {
     const $tr = $('<tr/>');
@@ -32,7 +36,12 @@ function renderSheet($, XLSX, sheet) {
     });
     $table.append($tr);
   });
-  return $table;
+  $wrap.append($table);
+  if (allRows.length > MAX_ROWS) {
+    $wrap.append($('<div class="nx-xlsx-truncated"/>').text(
+      'Показаны первые ' + MAX_ROWS + ' строк из ' + allRows.length + '. Скачайте файл для полного просмотра.'));
+  }
+  return $wrap;
 }
 
 export default function render({ $, file, $body, params, loader }) {

@@ -5,13 +5,13 @@ import { loadVendorScripts } from '../vendorLoader.js';
 // параллельную загрузку.
 let _libPromise = null;
 function ensureLib(params) {
-  if (window.docx) return Promise.resolve(window.docx);
+  if (window.docx && window.docx.renderAsync) return Promise.resolve(window.docx);
   if (_libPromise) return _libPromise;
   const base = (params && params.path) ? params.path : '';
   _libPromise = loadVendorScripts([base + '/vendor/jszip.min.js', base + '/vendor/docx-preview.min.js'])
     .then(() => {
-      if (window.docx) return window.docx;
-      throw new Error('docx-preview загружен, но window.docx пуст');
+      if (window.docx && window.docx.renderAsync) return window.docx;
+      throw new Error('docx-preview загружен, но window.docx.renderAsync недоступен');
     })
     .catch((e) => { _libPromise = null; throw e; });
   return _libPromise;
