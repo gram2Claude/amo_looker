@@ -5,9 +5,10 @@ import image  from './renderers/image.js';
 import text   from './renderers/text.js';
 import docx   from './renderers/docx.js';
 import xlsx   from './renderers/xlsx.js';
+import office from './renderers/office.js';
 import legacy from './renderers/legacy.js';
 
-const RENDERERS = { pdf, image, text, docx, xlsx, legacy };
+const RENDERERS = { pdf, image, text, docx, xlsx, office, legacy };
 
 export default class Modal {
   constructor({ $, langs, params, getSettings }) {

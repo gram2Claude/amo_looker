@@ -14,10 +14,10 @@
 import express from 'express';
 import pLimit from 'p-limit';
 import { spawn } from 'node:child_process';
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm, mkdir, readdir, stat, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual, randomUUID } from 'node:crypto';
 
 const PORT        = Number(process.env.PORT || 8094);
 const HOST        = process.env.HOST || '0.0.0.0';  // в docker; изоляцию даёт publish на 127.0.0.1 хоста
@@ -26,6 +26,14 @@ const MAX_BYTES   = Number(process.env.MAX_BYTES || 50 * 1024 * 1024);   // 50 �
 const TIMEOUT_MS  = Number(process.env.CONVERT_TIMEOUT_MS || 30000);     // 30 с
 const CONCURRENCY = Number(process.env.CONCURRENCY || 2);                // 2 CPU
 const SOFFICE     = process.env.SOFFICE_BIN || 'soffice';
+// --- Office Online preview: временный публичный хостинг файла, откуда его
+// скачивает Microsoft Office viewer. Файл уходит к MS — осознанное решение.
+const PREVIEW_DIR      = process.env.PREVIEW_DIR || '/preview';
+const PREVIEW_BASE_URL = process.env.PREVIEW_BASE_URL || 'https://nexus-oko.naithon.one';
+const PREVIEW_TTL_MS   = Number(process.env.PREVIEW_TTL_MS || 15 * 60 * 1000);   // 15 мин
+const PREVIEW_MAX_BYTES= Number(process.env.PREVIEW_MAX_BYTES || 15 * 1024 * 1024); // лимит Office viewer
+// Office viewer открывает эти форматы напрямую; csv → конвертируем в xlsx.
+const PREVIEW_EXT = new Set(['xlsx', 'xls', 'docx', 'doc', 'pptx', 'ppt']);
 // Origin-allowlist: конкретные кабинеты, НЕ маска *.amocrm.ru.
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ||
   'https://venskons78.amocrm.ru,https://toolkeeper.amocrm.ru').split(',').map((s) => s.trim());
@@ -101,28 +109,82 @@ app.post('/convert', async (req, res) => {
   }
 });
 
+// --- Office Online preview: принять файл, временно опубликовать, вернуть URL ---
+app.use('/preview-host', express.raw({ type: '*/*', limit: PREVIEW_MAX_BYTES }));
+app.options('/preview-host', (req, res) => { applyCors(req, res); res.sendStatus(204); });
+
+app.post('/preview-host', async (req, res) => {
+  applyCors(req, res);
+  if (!tokenOk(req.get('X-Source-Token'))) return res.status(401).json({ error: 'unauthorized' });
+  const body = req.body;
+  if (!body || !body.length) return res.status(400).json({ error: 'empty body' });
+  if (body.length > PREVIEW_MAX_BYTES) return res.status(413).json({ error: 'file too large for preview' });
+
+  let rawName;
+  try { rawName = decodeURIComponent(req.get('X-Filename') || 'file'); }
+  catch (e) { return res.status(400).json({ error: 'bad filename' }); }
+  let ext = (rawName.match(/\.([a-z0-9]+)$/i) || [, ''])[1].toLowerCase();
+  if (ext !== 'csv' && !PREVIEW_EXT.has(ext)) return res.status(415).json({ error: 'unsupported type' });
+
+  let aborted = false;
+  req.on('aborted', () => { aborted = true; });
+  res.on('close', () => { aborted = true; });
+
+  try {
+    let data = body, outExt = ext;
+    if (ext === 'csv') {
+      // Office viewer не открывает csv → конвертируем в xlsx через LibreOffice
+      data = await limit(() => { if (aborted) throw new Error('aborted'); return convert(body, 'csv', () => aborted, 'xlsx'); });
+      outExt = 'xlsx';
+    }
+    if (aborted) return;
+    await mkdir(PREVIEW_DIR, { recursive: true });
+    const name = randomUUID() + '.' + outExt;   // непредсказуемое имя; TTL чистит
+    await writeFile(join(PREVIEW_DIR, name), data);
+    res.json({ url: PREVIEW_BASE_URL + '/preview/' + name, ttl_ms: PREVIEW_TTL_MS });
+  } catch (err) {
+    if (aborted) return;
+    console.error('[preview-host] failed:', String(err && err.code || err && err.message || 'error'));
+    res.status(502).json({ error: 'preview hosting failed' });
+  }
+});
+
+// TTL-очистка временных preview-файлов (ушедших к Microsoft) — каждые 5 минут.
+setInterval(async () => {
+  try {
+    const now = Date.now();
+    const files = await readdir(PREVIEW_DIR).catch(() => []);
+    for (const f of files) {
+      const p = join(PREVIEW_DIR, f);
+      const s = await stat(p).catch(() => null);
+      if (s && (now - s.mtimeMs) > PREVIEW_TTL_MS) await unlink(p).catch(() => {});
+    }
+  } catch (e) { /* noop */ }
+}, 5 * 60 * 1000);
+
 // Одна конвертация: свой tmp + свой профиль LibreOffice (иначе блокировки при
 // конкурентности), kill process tree по таймауту/abort, гарантированный cleanup.
-async function convert(buf, ext, isAborted) {
+// target — целевой формат ('pdf' для просмотра legacy; 'xlsx' для csv→Office viewer).
+async function convert(buf, ext, isAborted, target = 'pdf') {
   const dir = await mkdtemp(join(tmpdir(), 'nxconv-'));
   const profile = join(dir, 'profile');
   const input = join(dir, `input.${ext}`);
-  const output = join(dir, 'input.pdf');
+  const output = join(dir, `input.${target}`);
   try {
     await writeFile(input, buf);
-    await runSoffice(input, dir, profile, isAborted);
+    await runSoffice(input, dir, profile, isAborted, target);
     return await readFile(output);
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
-function runSoffice(input, outdir, profile, isAborted) {
+function runSoffice(input, outdir, profile, isAborted, target = 'pdf') {
   return new Promise((resolve, reject) => {
     const args = [
       '--headless', '--norestore', '--nodefault', '--nofirststartwizard', '--nolockcheck',
       `-env:UserInstallation=file://${profile}`,
-      '--convert-to', 'pdf', '--outdir', outdir, input
+      '--convert-to', target, '--outdir', outdir, input
     ];
     // detached → своя process group, чтобы по таймауту/abort убить всё дерево
     // stdio полностью ignore: не читаем pipe (иначе при полном буфере soffice
