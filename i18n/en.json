@@ -10,7 +10,8 @@
       "fetch_failed": "Failed to fetch file",
       "unsupported": "Format not yet supported. Please download the file instead.",
       "too_large": "File is too large to preview (over {{limit}}). Please download it.",
-      "converter_failed": "Conversion service is unavailable. Try later or download the file."
+      "converter_failed": "Conversion service is unavailable. Try later or download the file.",
+      "preview_failed": "Could not prepare preview. Try later or download the file."
     },
     "modal": {
       "download": "Download",

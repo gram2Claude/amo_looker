@@ -20,9 +20,9 @@ describe('detectKind', () => {
     expect(detectKind({ name: 'a.jpg' })).toBe('image');
     expect(detectKind({ name: 'a.png' })).toBe('image');
     expect(detectKind({ name: 'a.txt' })).toBe('text');
-    expect(detectKind({ name: 'a.csv' })).toBe('text');
     expect(detectKind({ name: 'a.docx' })).toBe('docx');
-    expect(detectKind({ name: 'a.xlsx' })).toBe('xlsx');
+    expect(detectKind({ name: 'a.xlsx' })).toBe('office');
+    expect(detectKind({ name: 'a.csv' })).toBe('office');
     expect(detectKind({ name: 'a.doc' })).toBe('legacy');
     expect(detectKind({ name: 'a.xls' })).toBe('legacy');
     expect(detectKind({ name: 'a.ppt' })).toBe('legacy');

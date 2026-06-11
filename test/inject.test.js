@@ -99,7 +99,7 @@ describe('Injector — инъекция глазика на реальной р�
     expect(document.querySelectorAll('[data-nx-injected]').length).toBe(0);
   });
 
-  it('клик по глазику зовёт onEyeClick с href и name', () => {
+  it('клик по глазику зовёт onEyeClick с href и name (нативный capture)', () => {
     mountFeed(NOTE_DOCX);
     const onEyeClick = vi.fn();
     const inj = new Injector({ $: jq, onEyeClick });
@@ -110,6 +110,32 @@ describe('Injector — инъекция глазика на реальной р�
     expect(arg.name).toBe('test_doc.docx');
     expect(arg.href).toContain('test_doc.docx');
     inj.stop();
+  });
+
+  it('клик по svg ВНУТРИ глазика тоже срабатывает (closest)', () => {
+    mountFeed(NOTE_DOCX);
+    const onEyeClick = vi.fn();
+    const inj = new Injector({ $: jq, onEyeClick });
+    inj.start();
+    const svg = document.querySelector('.nx-eye svg') || document.querySelector('.nx-eye').firstChild;
+    svg.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(onEyeClick).toHaveBeenCalledOnce();
+    inj.stop();
+  });
+
+  it('после stop() клик по глазику НЕ зовёт onEyeClick (listener снят)', () => {
+    mountFeed(NOTE_DOCX);
+    const onEyeClick = vi.fn();
+    const inj = new Injector({ $: jq, onEyeClick });
+    inj.start();
+    const eye = document.querySelector('.nx-eye');
+    inj.stop();
+    // глазик удалён в stop(); создадим вручную и кликнем — listener снят, вызова быть не должно
+    const fake = document.createElement('span'); fake.className = 'nx-eye';
+    fake.setAttribute('data-href', 'x'); fake.setAttribute('data-name', 'x');
+    document.body.appendChild(fake);
+    fake.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(onEyeClick).not.toHaveBeenCalled();
   });
 
   it('retry-таймер отменяется в stop() (observer не воскресает)', () => {

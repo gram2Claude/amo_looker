@@ -25,3 +25,14 @@
 
 ## Осталось для эпохи 2 (не AMO-13)
 - T16: связать виджет с конвертером — передать `converter_url`/`converter_token` в legacy.js (env при сборке или advanced_settings), e2e .doc/.xls из ленты → PDF в модалке.
+
+## Office Online preview (xlsx/csv → Excel-вид) — добавлено 11.06
+- Endpoint `POST /preview-host` (токен, лимит 15МБ): принимает файл, csv конвертит в xlsx,
+  кладёт во временную папку, возвращает публичный URL. Виджет отдаёт этот URL в
+  Microsoft Office Online viewer (`view.officeapps.live.com/op/embed.aspx`).
+- ⚠️ **ПРИВАТНОСТЬ:** при предпросмотре xlsx/csv файл уходит на серверы Microsoft (MS качает
+  его по публичному URL с нашего сервера). Осознанное решение проекта.
+- Том: `/opt/nexus-preview:/preview`. **ВАЖНО:** папка должна принадлежать uid 10001
+  (`chown -R 10001:10001 /opt/nexus-preview`) — контейнер пишет под non-root conv(10001),
+  иначе EACCES. nginx отдаёт публично через `location /preview/`.
+- TTL: файлы старше 15 мин удаляются (setInterval в server.js). Имена — uuid (непредсказуемы).

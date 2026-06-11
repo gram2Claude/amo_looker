@@ -15,3 +15,6 @@ dist/
 # converter secrets/deps
 converter/.env
 converter/node_modules/
+
+# реальные файлы пользователя для теста — не в публичный репо
+work_directory/tests/fixtures/user_files/

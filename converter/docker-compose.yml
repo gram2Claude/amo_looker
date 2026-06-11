@@ -14,6 +14,14 @@ services:
       CONVERT_TIMEOUT_MS: "30000"
       CONCURRENCY: "2"
       CORS_ORIGINS: "https://venskons78.amocrm.ru,https://toolkeeper.amocrm.ru"
+      PREVIEW_DIR: "/preview"
+      PREVIEW_BASE_URL: "https://nexus-oko.naithon.one"
+      PREVIEW_TTL_MS: "900000"
+      PREVIEW_MAX_BYTES: "15728640"
+    # том для временных preview-файлов (их по публичному URL качает Microsoft Office viewer);
+    # nginx отдаёт их через location /preview/ → /opt/nexus-preview
+    volumes:
+      - /opt/nexus-preview:/preview
     # скромный сервер 2 CPU / 3.8 GB — лимиты, чтобы LibreOffice не съел всё
     mem_limit: 2g
     pids_limit: 256
