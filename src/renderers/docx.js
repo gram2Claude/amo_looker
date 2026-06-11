@@ -1,21 +1,19 @@
-// Loads docx-preview UMD bundle from vendor/ via a <script> tag (RequireJS in
-// amoCRM has quirks with named UMD bundles). The bundle exposes window.docx.
-// module-level promise дедуплицирует параллельную загрузку vendor-скрипта.
+import { loadVendorScripts } from '../vendorLoader.js';
+
+// docx-preview (UMD) зависит от глобального JSZip → грузим jszip ПЕРЕД ним,
+// оба с занулённым define (см. vendorLoader). module-level promise дедуплицирует
+// параллельную загрузку.
 let _libPromise = null;
 function ensureLib(params) {
-  if (window.docx) return Promise.resolve(window.docx);
+  if (window.docx && window.docx.renderAsync) return Promise.resolve(window.docx);
   if (_libPromise) return _libPromise;
-  _libPromise = new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    const cdnBase = (params && params.path) ? params.path : '';
-    s.src = cdnBase + '/vendor/docx-preview.min.js';
-    s.onload = () => {
-      if (window.docx) resolve(window.docx);
-      else { _libPromise = null; reject(new Error('docx-preview загружен, но window.docx пуст')); }
-    };
-    s.onerror = () => { _libPromise = null; reject(new Error('Не удалось загрузить docx-preview')); };
-    document.head.appendChild(s);
-  });
+  const base = (params && params.path) ? params.path : '';
+  _libPromise = loadVendorScripts([base + '/vendor/jszip.min.js', base + '/vendor/docx-preview.min.js'])
+    .then(() => {
+      if (window.docx && window.docx.renderAsync) return window.docx;
+      throw new Error('docx-preview загружен, но window.docx.renderAsync недоступен');
+    })
+    .catch((e) => { _libPromise = null; throw e; });
   return _libPromise;
 }
 
