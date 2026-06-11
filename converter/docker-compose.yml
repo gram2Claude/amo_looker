@@ -1,0 +1,28 @@
+services:
+  converter:
+    build: .
+    image: nexus-converter:latest
+    container_name: nexus-converter
+    restart: unless-stopped
+    # publish ТОЛЬКО на loopback хоста → снаружи доступен лишь через nginx (TLS)
+    ports:
+      - "127.0.0.1:8094:8094"
+    environment:
+      PORT: "8094"
+      CONVERTER_TOKEN: "${CONVERTER_TOKEN}"
+      MAX_BYTES: "52428800"
+      CONVERT_TIMEOUT_MS: "30000"
+      CONCURRENCY: "2"
+      CORS_ORIGINS: "https://venskons78.amocrm.ru,https://toolkeeper.amocrm.ru"
+    # скромный сервер 2 CPU / 3.8 GB — лимиты, чтобы LibreOffice не съел всё
+    mem_limit: 2g
+    pids_limit: 256
+    cpus: 2.0
+    tmpfs:
+      - /tmp:size=1g
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8094/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

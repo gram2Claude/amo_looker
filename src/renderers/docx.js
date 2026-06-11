@@ -1,24 +1,28 @@
 // Loads docx-preview UMD bundle from vendor/ via a <script> tag (RequireJS in
 // amoCRM has quirks with named UMD bundles). The bundle exposes window.docx.
+// module-level promise дедуплицирует параллельную загрузку vendor-скрипта.
+let _libPromise = null;
 function ensureLib(params) {
   if (window.docx) return Promise.resolve(window.docx);
-  return new Promise((resolve, reject) => {
+  if (_libPromise) return _libPromise;
+  _libPromise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
     const cdnBase = (params && params.path) ? params.path : '';
     s.src = cdnBase + '/vendor/docx-preview.min.js';
-    s.onload = () => resolve(window.docx);
-    s.onerror = () => reject(new Error('Не удалось загрузить docx-preview'));
+    s.onload = () => {
+      if (window.docx) resolve(window.docx);
+      else { _libPromise = null; reject(new Error('docx-preview загружен, но window.docx пуст')); }
+    };
+    s.onerror = () => { _libPromise = null; reject(new Error('Не удалось загрузить docx-preview')); };
     document.head.appendChild(s);
   });
+  return _libPromise;
 }
 
-export default function render({ file, $body, params }) {
+export default function render({ file, $body, params, loader }) {
   return Promise.all([
     ensureLib(params),
-    // 'same-origin', НЕ 'include': кука нужна только на первом same-origin хопе;
-    // на CORS-редиректе amo→drive→S3 credentialed-запрос несовместим с ACAO:*
-    // (см. work_directory/01_specs/01_dom_recon_amocrm.md)
-    fetch(file.href, { credentials: 'same-origin' }).then((r) => r.arrayBuffer())
+    loader.fetchBuffer(file.href).then(({ buf }) => buf)
   ]).then(([docx, buf]) => {
     const container = document.createElement('div');
     container.className = 'nx-render-docx';

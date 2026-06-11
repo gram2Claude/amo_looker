@@ -1,6 +1,8 @@
 const EXT_TO_KIND = {
   pdf: 'pdf',
-  jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image', svg: 'image',
+  // svg НЕ предпросматриваем inline: <img src=blob:svg> исполнит встроенные
+  // скрипты/обработчики (XSS внутри страницы amoCRM) → отдаём на «Скачать».
+  jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image',
   txt: 'text', csv: 'text', json: 'text', md: 'text', log: 'text',
   docx: 'docx',
   xlsx: 'xlsx',

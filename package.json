@@ -2,13 +2,16 @@
   "name": "nexus-amo-widget",
   "version": "0.1.0",
   "private": true,
-  "description": "Toolkeeper Looker — preview attachments inline in amoCRM (no download).",
+  "description": "Nexus Looker — preview attachments inline in amoCRM (no download).",
   "scripts": {
     "build": "node build.js",
-    "clean": "rm -rf dist/*"
+    "clean": "rm -rf dist/*",
+    "test": "vitest run"
   },
   "devDependencies": {
     "archiver": "^7.0.1",
-    "esbuild": "^0.23.0"
+    "esbuild": "^0.23.0",
+    "jsdom": "^25.0.1",
+    "vitest": "^2.1.8"
   }
 }

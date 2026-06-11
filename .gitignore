@@ -11,3 +11,7 @@ __MACOSX/
 node_modules/
 dist/
 *.log
+
+# converter secrets/deps
+converter/.env
+converter/node_modules/
