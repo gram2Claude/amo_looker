@@ -3,12 +3,13 @@ import Loader from './loader.js';
 import pdf    from './renderers/pdf.js';
 import image  from './renderers/image.js';
 import text   from './renderers/text.js';
+import markdown from './renderers/markdown.js';
 import docx   from './renderers/docx.js';
 import xlsx   from './renderers/xlsx.js';
 import office from './renderers/office.js';
 import legacy from './renderers/legacy.js';
 
-const RENDERERS = { pdf, image, text, docx, xlsx, office, legacy };
+const RENDERERS = { pdf, image, text, markdown, docx, xlsx, office, legacy };
 
 export default class Modal {
   constructor({ $, langs, params, getSettings }) {

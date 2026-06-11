@@ -3,7 +3,8 @@ const EXT_TO_KIND = {
   // svg НЕ предпросматриваем inline: <img src=blob:svg> исполнит встроенные
   // скрипты/обработчики (XSS внутри страницы amoCRM) → отдаём на «Скачать».
   jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image',
-  txt: 'text', json: 'text', md: 'text', log: 'text',
+  txt: 'text', json: 'text', log: 'text',
+  md: 'markdown', markdown: 'markdown',   // .md рендерим с разметкой (markdown-it)
   // docx/pptx/xlsx/csv → Office Online viewer (Word/PP/Excel-вид). ВНИМАНИЕ: файл уходит к Microsoft.
   docx: 'office', pptx: 'office', xlsx: 'office', csv: 'office',
   doc: 'legacy', xls: 'legacy', ppt: 'legacy', rtf: 'legacy', odt: 'legacy', ods: 'legacy', odp: 'legacy'

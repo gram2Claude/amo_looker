@@ -20,6 +20,7 @@ describe('detectKind', () => {
     expect(detectKind({ name: 'a.jpg' })).toBe('image');
     expect(detectKind({ name: 'a.png' })).toBe('image');
     expect(detectKind({ name: 'a.txt' })).toBe('text');
+    expect(detectKind({ name: 'a.md' })).toBe('markdown');
     expect(detectKind({ name: 'a.docx' })).toBe('office');
     expect(detectKind({ name: 'a.pptx' })).toBe('office');
     expect(detectKind({ name: 'a.xlsx' })).toBe('office');
