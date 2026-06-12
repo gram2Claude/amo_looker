@@ -131,6 +131,37 @@ describe('warm-пул: деградация', () => {
     await hang;
   });
 
+  it('самолечение: 2 ошибки подряд → recycle воркера (анти-«illegal object»)', async () => {
+    let failTimes = 2;
+    const _spawn = makeSpawn({
+      behave: async (a, pr) => {
+        if (failTimes-- > 0) { pr.emit('close', 1); return; }   // деградировавший LO
+        await writeFile(a[a.length - 1], '%PDF-warm');
+        pr.emit('close', 0);
+      }
+    });
+    const pool = makePool({ _spawn, poolSize: 1 });
+    await expect(pool.convert(Buffer.from('a'), 'doc', () => false)).rejects.toThrow('unoconvert exit 1');
+    expect(_spawn.calls.unoserver.length).toBe(1);   // одна ошибка — ещё не recycle
+    await expect(pool.convert(Buffer.from('b'), 'doc', () => false)).rejects.toThrow('unoconvert exit 1');
+    await wait(50);                                   // respawnDelayMs=20 + boot grace 10
+    expect(_spawn.calls.unoserver.length).toBe(2);   // вторая подряд — воркер перезапущен
+    const out = await pool.convert(Buffer.from('c'), 'doc', () => false);
+    expect(out.toString()).toBe('%PDF-warm');        // свежий воркер работает
+    pool.shutdown();
+  });
+
+  it('csv идёт с явным импорт-фильтром Calc и host-location local', async () => {
+    const _spawn = makeSpawn();
+    const pool = makePool({ _spawn });
+    await pool.convert(Buffer.from('a;b'), 'csv', () => false, 'xlsx');
+    const args = _spawn.calls.unoconvert[0].args;
+    expect(args).toContain('--input-filter');
+    expect(args[args.indexOf('--input-filter') + 1]).toBe('Text - txt - csv (StarCalc)');
+    expect(args[args.indexOf('--host-location') + 1]).toBe('local');
+    pool.shutdown();
+  });
+
   it('упавший unoserver-воркер сам уходит в respawn', async () => {
     const _spawn = makeSpawn();
     const pool = makePool({ _spawn });

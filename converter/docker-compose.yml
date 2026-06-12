@@ -12,7 +12,9 @@ services:
       # Служебный токен (curl/мониторинг). Браузерный виджет авторизуется по Origin.
       CONVERTER_TOKEN: "${CONVERTER_TOKEN}"
       MAX_BYTES: "52428800"
-      CONVERT_TIMEOUT_MS: "30000"
+      # 30с → 40с: тяжёлый medium-xlsx легитимно ест ~25с (замер 12.06), 30с давало
+      # ложные таймауты на p95; nginx proxy_read_timeout 60s остаётся внешней границей
+      CONVERT_TIMEOUT_MS: "40000"
       CONCURRENCY: "2"
       # Прогретый пул LibreOffice (спека 04, этап 1.1); cold = откат к per-request spawn
       CONVERT_MODE: "warm"

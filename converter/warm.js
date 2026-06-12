@@ -73,7 +73,7 @@ export function createWarmPool({
   for (let i = 0; i < poolSize; i++) {
     // ВАЖНО: --user-installation ждёт ОБЫЧНЫЙ путь (unoserver сам делает Path().as_uri();
     // передача file:// URI роняет его с "relative path can't be expressed as a file URI").
-    const w = { id: i, port: basePort + i, profile: `/tmp/uno-profile-${i}`, busy: false, state: 'dead', proc: null, respawnTimer: null, killing: false };
+    const w = { id: i, port: basePort + i, profile: `/tmp/uno-profile-${i}`, busy: false, state: 'dead', proc: null, respawnTimer: null, killing: false, failStreak: 0, jobsDone: 0 };
     workers.push(w);
     bootWorker(w);
   }
@@ -104,6 +104,22 @@ export function createWarmPool({
   }
   function release(w) { w.busy = false; pump(); }
 
+  // --- самолечение -----------------------------------------------------------
+  // Деградировавший LO-инстанс (например, после неудачного экспорта UNO может
+  // навсегда отвечать "illegal object given" — поймано на проде) сам не чинится:
+  // 2 ошибки подряд ИЛИ MAX_JOBS джобов → профилактический kill+respawn.
+  const FAIL_STREAK_LIMIT = Number(process.env.POOL_FAIL_STREAK || 2);
+  const MAX_JOBS = Number(process.env.POOL_MAX_JOBS || 100);
+  function afterJob(w, ok) {
+    w.jobsDone++;
+    w.failStreak = ok ? 0 : w.failStreak + 1;
+    if (w.failStreak >= FAIL_STREAK_LIMIT || w.jobsDone >= MAX_JOBS) {
+      log(JSON.stringify({ evt: 'pool', action: 'worker-recycle', worker: w.id, reason: w.failStreak >= FAIL_STREAK_LIMIT ? 'fail-streak' : 'max-jobs' }));
+      w.failStreak = 0; w.jobsDone = 0;
+      killWorker(w);          // busy не снимаем — release() ниже вернёт его в оборот после respawn
+    }
+  }
+
   // --- конвертация ----------------------------------------------------------
   // isAborted сознательно НЕ прерывает работу (см. шапку) — только начальный гейт.
   async function convert(buf, ext, isAborted, target = 'pdf') {
@@ -112,9 +128,17 @@ export function createWarmPool({
     const dir = await mkdtemp(join(tmpdir(), 'nxwarm-'));
     const input = join(dir, `input.${ext}`);
     const output = join(dir, `output.${target}`);
+    let timedOut = false;
     try {
       await writeFile(input, buf);
-      await runUnoconvert(w, input, output, target, ext);
+      try {
+        await runUnoconvert(w, input, output, target, ext);
+        afterJob(w, true);
+      } catch (e) {
+        timedOut = String(e && e.message) === 'timeout';
+        if (!timedOut) afterJob(w, false);   // по таймауту воркер уже убит в runUnoconvert
+        throw e;
+      }
       return await readFile(output);
     } finally {
       release(w);
@@ -124,7 +148,10 @@ export function createWarmPool({
 
   function runUnoconvert(w, input, output, target, ext) {
     return new Promise((resolve, reject) => {
-      const args = ['--port', String(w.port), '--host-location', 'remote'];
+      // host-location local: unoconvert и unoserver живут в одном контейнере с
+      // общей ФС — передаём ПУТЬ, а не контент (remote гонит файл base64'ом через
+      // XML-RPC — на 2.8МБ это заметная лишняя работа, поймано повторным замером).
+      const args = ['--port', String(w.port), '--host-location', 'local'];
       // csv без явного фильтра UNO открывает Writer'ом (TextDocument) и не может
       // экспортнуть в xlsx — для csv форсируем импорт Calc'ом (поймано на проде).
       if (ext === 'csv') args.push('--input-filter', 'Text - txt - csv (StarCalc)');
