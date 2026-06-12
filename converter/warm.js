@@ -114,7 +114,7 @@ export function createWarmPool({
     const output = join(dir, `output.${target}`);
     try {
       await writeFile(input, buf);
-      await runUnoconvert(w, input, output, target);
+      await runUnoconvert(w, input, output, target, ext);
       return await readFile(output);
     } finally {
       release(w);
@@ -122,12 +122,14 @@ export function createWarmPool({
     }
   }
 
-  function runUnoconvert(w, input, output, target) {
+  function runUnoconvert(w, input, output, target, ext) {
     return new Promise((resolve, reject) => {
-      const proc = _spawn(unoconvertBin, [
-        '--port', String(w.port), '--host-location', 'remote',
-        '--convert-to', target, input, output
-      ], { stdio: 'ignore' });
+      const args = ['--port', String(w.port), '--host-location', 'remote'];
+      // csv без явного фильтра UNO открывает Writer'ом (TextDocument) и не может
+      // экспортнуть в xlsx — для csv форсируем импорт Calc'ом (поймано на проде).
+      if (ext === 'csv') args.push('--input-filter', 'Text - txt - csv (StarCalc)');
+      args.push('--convert-to', target, input, output);
+      const proc = _spawn(unoconvertBin, args, { stdio: 'ignore' });
       let done = false;
       const finish = (fn, arg) => { if (done) return; done = true; clearTimeout(timer); fn(arg); };
       // Таймаут = завис unoconvert ИЛИ LO-воркер: убиваем обоих, воркер уходит
