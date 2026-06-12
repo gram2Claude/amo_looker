@@ -35,6 +35,7 @@ export function createWarmPool({
   bootGraceMs = BOOT_GRACE_MS,
   respawnDelayMs = 1000,
   _spawn = spawn,            // DI для тестов
+  _mkdtemp = mkdtemp,        // DI для тестов (сценарий ENOSPC)
   log = (line) => console.log(line)
 } = {}) {
 
@@ -44,21 +45,40 @@ export function createWarmPool({
 
   function bootWorker(w) {
     w.state = 'booting';
-    w.proc = _spawn(unoserverBin, [
+    // Все колбэки замыкают СВОЙ proc и проверяют w.proc === proc: stale-таймер
+    // или запоздавший exit убитого процесса не должны трогать уже перезапущенный
+    // воркер (гонка respawn — находка двойного ревью E4).
+    const proc = w.proc = _spawn(unoserverBin, [
       '--port', String(w.port),
       '--interface', '127.0.0.1',
       '--user-installation', w.profile
     ], { stdio: 'ignore', detached: true });
-    w.proc.on('error', () => { w.state = 'dead'; scheduleRespawn(w); });
-    w.proc.on('exit', () => { if (!w.killing) { w.state = 'dead'; scheduleRespawn(w); } });
+    proc.on('error', () => {
+      if (w.proc !== proc) return;
+      log(JSON.stringify({ evt: 'pool', action: 'worker-spawn-error', worker: w.id }));
+      w.state = 'dead'; scheduleRespawn(w);
+    });
+    proc.on('exit', () => {
+      if (w.proc !== proc || w.killing) return;
+      w.state = 'dead'; scheduleRespawn(w);
+    });
     // unoserver поднимает LO за секунды; готовность не проверяем RPC'ом —
     // первый unoconvert сам дождётся/упадёт, таймаут и restart нас страхуют.
-    setTimeout(() => { if (w.state === 'booting') { w.state = 'ready'; pump(); } }, bootGraceMs).unref();
+    if (w.bootTimer) clearTimeout(w.bootTimer);
+    w.bootTimer = setTimeout(() => {
+      w.bootTimer = null;
+      if (w.proc === proc && w.state === 'booting') { w.state = 'ready'; pump(); }
+    }, bootGraceMs);
+    w.bootTimer.unref();
   }
 
   function killWorker(w) {
     w.killing = true;
-    try { process.kill(-w.proc.pid, 'SIGKILL'); } catch (e) { try { w.proc.kill('SIGKILL'); } catch (e2) {} }
+    if (w.bootTimer) { clearTimeout(w.bootTimer); w.bootTimer = null; }
+    if (w.proc) {
+      try { process.kill(-w.proc.pid, 'SIGKILL'); } catch (e) { try { w.proc.kill('SIGKILL'); } catch (e2) {} }
+    }
+    w.proc = null;       // запоздавший exit убитого процесса отсечётся generation-guard'ом
     w.state = 'dead';
     w.killing = false;
     scheduleRespawn(w);
@@ -73,7 +93,7 @@ export function createWarmPool({
   for (let i = 0; i < poolSize; i++) {
     // ВАЖНО: --user-installation ждёт ОБЫЧНЫЙ путь (unoserver сам делает Path().as_uri();
     // передача file:// URI роняет его с "relative path can't be expressed as a file URI").
-    const w = { id: i, port: basePort + i, profile: `/tmp/uno-profile-${i}`, busy: false, state: 'dead', proc: null, respawnTimer: null, killing: false, failStreak: 0, jobsDone: 0 };
+    const w = { id: i, port: basePort + i, profile: `/tmp/uno-profile-${i}`, busy: false, state: 'dead', proc: null, respawnTimer: null, bootTimer: null, killing: false, failStreak: 0, jobsDone: 0 };
     workers.push(w);
     bootWorker(w);
   }
@@ -122,27 +142,30 @@ export function createWarmPool({
 
   // --- конвертация ----------------------------------------------------------
   // isAborted сознательно НЕ прерывает работу (см. шапку) — только начальный гейт.
+  // ВСЁ после acquire() — внутри try/finally с release(w): ошибка ФС (ENOSPC/EMFILE
+  // на mkdtemp) не должна навсегда оставить воркера busy (HIGH-находка ревью E4 —
+  // две такие ошибки перманентно убивали пул до рестарта контейнера).
   async function convert(buf, ext, isAborted, target = 'pdf') {
     if (isAborted && isAborted()) throw new Error('client aborted');
     const w = await acquire();
-    const dir = await mkdtemp(join(tmpdir(), 'nxwarm-'));
-    const input = join(dir, `input.${ext}`);
-    const output = join(dir, `output.${target}`);
-    let timedOut = false;
+    let dir;
     try {
+      dir = await _mkdtemp(join(tmpdir(), 'nxwarm-'));
+      const input = join(dir, `input.${ext}`);
+      const output = join(dir, `output.${target}`);
       await writeFile(input, buf);
       try {
         await runUnoconvert(w, input, output, target, ext);
         afterJob(w, true);
       } catch (e) {
-        timedOut = String(e && e.message) === 'timeout';
-        if (!timedOut) afterJob(w, false);   // по таймауту воркер уже убит в runUnoconvert
+        // по таймауту воркер уже убит в runUnoconvert — afterJob не дёргаем
+        if (String(e && e.message) !== 'timeout') afterJob(w, false);
         throw e;
       }
       return await readFile(output);
     } finally {
       release(w);
-      await rm(dir, { recursive: true, force: true }).catch(() => {});
+      if (dir) await rm(dir, { recursive: true, force: true }).catch(() => {});
     }
   }
 
@@ -175,11 +198,22 @@ export function createWarmPool({
   function shutdown() {
     for (const w of workers) {
       if (w.respawnTimer) { clearTimeout(w.respawnTimer); w.respawnTimer = null; }
+      if (w.bootTimer) { clearTimeout(w.bootTimer); w.bootTimer = null; }
       w.killing = true;
       if (w.proc) { try { process.kill(-w.proc.pid, 'SIGKILL'); } catch (e) { try { w.proc.kill('SIGKILL'); } catch (e2) {} } }
+      w.proc = null;
       w.state = 'dead';
     }
   }
 
   return { convert, shutdown, _workers: workers, _waiters: waiters };
+}
+
+// Гибрид warm-режима: тяжёлые файлы — холодным путём (UNO-конвертация больших
+// документов медленнее прямого soffice, а тёплые воркеры нужны small-потоку).
+// Вынесено в фабрику ради тестируемости (находка ревью E4).
+export function makeHybridConvert(warmFn, coldFn, maxBytes) {
+  return (buf, ext, isAborted, target) => (buf.length > maxBytes
+    ? coldFn(buf, ext, isAborted, target)
+    : warmFn(buf, ext, isAborted, target));
 }

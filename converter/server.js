@@ -11,7 +11,7 @@ import { readdir, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createApp } from './app.js';
 import { convert as coldConvert } from './convert.js';
-import { createWarmPool } from './warm.js';
+import { createWarmPool, makeHybridConvert } from './warm.js';
 
 const PORT = Number(process.env.PORT || 8094);
 const HOST = process.env.HOST || '0.0.0.0';  // в docker; изоляцию даёт publish на 127.0.0.1 хоста
@@ -28,11 +28,7 @@ const HOST = process.env.HOST || '0.0.0.0';  // в docker; изоляцию да
 const MODE = (process.env.CONVERT_MODE || 'cold').toLowerCase();
 const WARM_MAX_BYTES = Number(process.env.WARM_MAX_BYTES || 2 * 1024 * 1024);
 const pool = MODE === 'warm' ? createWarmPool() : null;
-const convert = pool
-  ? (buf, ext, isAborted, target) => (buf.length > WARM_MAX_BYTES
-      ? coldConvert(buf, ext, isAborted, target)
-      : pool.convert(buf, ext, isAborted, target))
-  : coldConvert;
+const convert = pool ? makeHybridConvert(pool.convert, coldConvert, WARM_MAX_BYTES) : coldConvert;
 
 const { app, cfg } = createApp({ convert });
 

@@ -16,7 +16,11 @@ services:
       # ложные таймауты на p95; nginx proxy_read_timeout 60s остаётся внешней границей
       CONVERT_TIMEOUT_MS: "40000"
       CONCURRENCY: "2"
-      # Прогретый пул LibreOffice (спека 04, этап 1.1); cold = откат к per-request spawn
+      # Прогретый пул LibreOffice (спека 04, этап 1.1); cold = откат к per-request spawn.
+      # Гибрид: файлы > WARM_MAX_BYTES (2МБ) идут холодным путём. RAM worst-case
+      # (ревью E4): 2 тёплых LO (~220МБ idle суммарно) + до CONCURRENCY холодных
+      # soffice на больших файлах + 8×50МБ тел — p-limit капит суммарную конкурентность
+      # конвертаций двумя; при OOM cgroup (2g) контейнер перезапустится (restart policy).
       CONVERT_MODE: "warm"
       # Публичная схема: любой кабинет amoCRM/Kommo (однометочный поддомен).
       # Переопределяется при необходимости сузить до конкретных кабинетов.

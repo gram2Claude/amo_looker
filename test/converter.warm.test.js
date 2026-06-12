@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { writeFile } from 'node:fs/promises';
-import { createWarmPool } from '../converter/warm.js';
+import { createWarmPool, makeHybridConvert } from '../converter/warm.js';
 
 let nextPid = 1000;
 
@@ -162,6 +162,57 @@ describe('warm-пул: деградация', () => {
     pool.shutdown();
   });
 
+  it('ошибка ФС после acquire (ENOSPC) НЕ оставляет воркера busy навсегда (HIGH ревью E4)', async () => {
+    let failMkdtemp = true;
+    const _spawn = makeSpawn();
+    const pool = makePool({
+      _spawn, poolSize: 1,
+      _mkdtemp: async (p) => {
+        if (failMkdtemp) throw Object.assign(new Error('no space left'), { code: 'ENOSPC' });
+        const { mkdtemp } = await import('node:fs/promises');
+        return mkdtemp(p);
+      }
+    });
+    await expect(pool.convert(Buffer.from('x'), 'doc', () => false)).rejects.toThrow('no space left');
+    failMkdtemp = false;                       // «диск освободился»
+    const out = await pool.convert(Buffer.from('y'), 'doc', () => false);
+    expect(out.toString()).toBe('%PDF-warm');  // воркер вернулся в оборот, пул жив
+    pool.shutdown();
+  });
+
+  it('профилактический recycle после MAX_JOBS джобов', async () => {
+    const prev = process.env.POOL_MAX_JOBS;
+    process.env.POOL_MAX_JOBS = '2';
+    try {
+      const _spawn = makeSpawn();
+      const pool = makePool({ _spawn, poolSize: 1 });
+      await pool.convert(Buffer.from('a'), 'doc', () => false);
+      expect(_spawn.calls.unoserver.length).toBe(1);
+      await pool.convert(Buffer.from('b'), 'doc', () => false);   // 2-й джоб → recycle
+      await wait(50);
+      expect(_spawn.calls.unoserver.length).toBe(2);
+      const out = await pool.convert(Buffer.from('c'), 'doc', () => false);
+      expect(out.toString()).toBe('%PDF-warm');
+      pool.shutdown();
+    } finally {
+      if (prev === undefined) delete process.env.POOL_MAX_JOBS; else process.env.POOL_MAX_JOBS = prev;
+    }
+  });
+
+  it('stale boot-таймер старого процесса не трогает перезапущенный воркер (generation guard)', async () => {
+    const _spawn = makeSpawn();
+    // большой grace: первый boot-таймер «висит», когда воркер умирает и перезапускается
+    const pool = makePool({ _spawn, poolSize: 1, bootGraceMs: 80, respawnDelayMs: 10 });
+    const w = pool._workers[0];
+    _spawn.calls.unoserver[0].proc.emit('exit');   // умер во время booting
+    await wait(30);                                 // respawn произошёл (новый proc)
+    expect(_spawn.calls.unoserver.length).toBe(2);
+    expect(w.state).toBe('booting');                // старый таймер (80мс) НЕ пометил ready
+    await wait(80);                                 // новый таймер добежал
+    expect(w.state).toBe('ready');
+    pool.shutdown();
+  });
+
   it('упавший unoserver-воркер сам уходит в respawn', async () => {
     const _spawn = makeSpawn();
     const pool = makePool({ _spawn });
@@ -173,5 +224,19 @@ describe('warm-пул: деградация', () => {
     const out = await pool.convert(Buffer.from('x'), 'doc', () => false);
     expect(out.toString()).toBe('%PDF-warm');
     pool.shutdown();
+  });
+});
+
+describe('makeHybridConvert: роутинг по размеру', () => {
+  it('маленькие — warm, большие — cold; контракт передаётся целиком', () => {
+    const calls = [];
+    const warm = (...a) => { calls.push(['warm', a[1]]); return 'W'; };
+    const cold = (...a) => { calls.push(['cold', a[1]]); return 'C'; };
+    const hybrid = makeHybridConvert(warm, cold, 100);
+    const small = Buffer.alloc(100);   // ровно порог — НЕ больше → warm
+    const big = Buffer.alloc(101);
+    expect(hybrid(small, 'doc', null, 'pdf')).toBe('W');
+    expect(hybrid(big, 'xls', null, 'pdf')).toBe('C');
+    expect(calls).toEqual([['warm', 'doc'], ['cold', 'xls']]);
   });
 });
