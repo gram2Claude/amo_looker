@@ -51,7 +51,10 @@ read leads, contacts, conversations or any CRM data other than the file the user
 <h2>4. Storage and logging</h2>
 <p>The Developer's server does not keep files longer than needed for conversion or
 preview (at most 5 minutes for Office formats). File contents are never logged.
-Server logs are limited to data required for reliability and abuse protection.</p>
+Server logs are limited to data required for reliability and abuse protection:
+an internal request id, file type (extension) and size, processing stage durations,
+result code and request country. File names, file contents and IP addresses are
+never written to logs; logs are rotated automatically (about 30 days).</p>
 
 <h2>5. Third parties</h2>
 <p>The only third party that receives file content is Microsoft (only for

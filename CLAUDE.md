@@ -46,11 +46,14 @@ cd converter && docker compose --env-file .env up -d --build   # сборка/п
 - **Рендерятся локально, никуда не уходят:** `pdf.js` (blob→iframe), `image.js` (blob→`<img>`, включая **svg** — скрипты в svg НЕ исполняются в `<img>`), `text.js`, `markdown.js` (markdown-it с `html:false`), `legacy.js` (.doc/.xls/.ppt → свой конвертер LibreOffice→PDF).
 - `fileUtils.js` (`EXT_TO_KIND`) — единственный источник маппинга расширение→рендерер. Менять поведение формата здесь.
 
-**converter/ — отдельный сервис** (Docker, за nginx `https://nexus-oko.naithon.one`). `app.js` — фабрика `createApp({ convert })` (DI для тестов), `server.js` — entry (listen + TTL-уборка), `convert.js` — LibreOffice:
-- `POST /convert` — legacy Office → PDF через LibreOffice headless (per-request профиль, kill process-tree по таймауту/abort, p-limit).
+**converter/ — отдельный сервис** (Docker, за nginx `https://nexus-oko.naithon.one`). `app.js` — фабрика `createApp({ convert })` (DI для тестов), `server.js` — entry (listen + TTL-уборка + выбор режима конвертации), `convert.js` — холодный LibreOffice, `warm.js` — прогретый пул:
+- `POST /convert` — legacy Office → PDF. **Два режима** (`CONVERT_MODE=warm|cold`, откат одним env'ом): `warm` (прод) — пул unoserver-воркеров = `CONCURRENCY`, p50 small ~0.5с против ~1.6с cold; `cold` — старый per-request spawn. Инварианты warm: таймаут (40с) = kill+restart воркера; **abort клиента воркера НЕ убивает** (job дорабатывает, результат выбрасывается — иначе restart-шторм); самолечение: recycle воркера после 2 ошибок подряд (LO деградирует после неудачных экспортов — «illegal object given») и профилактически после 100 джобов; csv требует явного импорт-фильтра Calc; `--user-installation` ждёт путь, НЕ file://-URI; `--host-location local` (общая ФС, без base64 через XML-RPC).
 - `POST /preview-host` — временно публикует файл под uuid-URL (TTL 5 мин), откуда его качает Microsoft viewer; csv конвертит в xlsx.
+- **Тайминг-логи** (спека 04, этап 1.2): JSON-строка на запрос — id/ext/bytes/queueMs/convertMs/totalMs/outcome/country (`CF-IPCountry`|unknown); `X-Request-Id` возвращается клиенту. **Имена файлов и IP в логи не пишутся** — инвариант приватности (отражён в privacy policy §4).
 - **Аутентификация публичная**: Origin кабинета amoCRM/Kommo (однометочный поддомен, `ALLOWED_ORIGIN_PATTERN`) ИЛИ служебный `X-Source-Token` (`timingSafeEqual`). `requireAuth` стоит ДО `express.raw` (тело не буферизуется без auth) — этот инвариант не ломать.
-- **Эшелон лимитов** (Origin подделывается из curl — принятый риск, спека §8): глобальный `MAX_INFLIGHT` (503 до буферизации), rate-limit 60-сек окно по двум ключам origin+ip (ip — из `X-Real-IP` nginx), nginx `limit_req`. Конфиг nginx/compose — в `converter/deploy/`.
+- **Эшелон лимитов** (Origin подделывается из curl — принятый риск, спека §8): глобальный `MAX_INFLIGHT` (503 до буферизации), rate-limit 60-сек окно по двум ключам origin+ip (ip — из `X-Real-IP` nginx), nginx `limit_req`. Конфиг nginx/compose — в `converter/deploy/`; nginx отдаёт h2 (`listen 443 ssl http2` — синтаксис для nginx 1.24).
+
+**Geo-performance (спека `work_directory/01_specs/04_geo_performance_spec.md`, эпоха E4):** клиент 0.3.0 добавил module-level LRU-кэш `src/cache.js` (3 слоя: `src:`-байты из amo, `pdf:`-готовый PDF legacy, `office:`-preview-url с TTL; кэшируются буферы, НЕ objectURL — конфликта с `Loader.dispose()` нет) и preconnect `src/preconnect.js` (конвертер — С `crossorigin`, officeapps — БЕЗ; детали критичны, см. комментарии). CDN и мульти-регион — ЗА гейтами замеров (`04_reviews/11_geo_baseline_report.md`), не строить без данных.
 
 ## Тесты
 
@@ -62,7 +65,7 @@ vitest + jsdom. `test/inject.test.js` монтирует реальную раз
 
 ## Контекст, которого нет в коде
 
-Целевой кабинет `venskons78.amocrm.ru` — **технический аккаунт** разработчика: виджет в нём НЕ исполняется автоматически (это режим аккаунта, не баг). Для ручного теста/демо используется букмарклет, грузящий `boot.js` со статики сервера (`widget-host/`, отдаётся nginx `/widget/`). Тестовые сделки с файлами всех форматов: 3200807 и 3177663. После передеплоя статики сверяй, что прод отдаёт ровно код из релиз-архива: sha256 `https://nexus-oko.naithon.one/widget/script.js` против `script.js` внутри zip. Реальный прод требует обычного рабочего аккаунта — см. `work_directory/04_reviews/08_autoload_investigation.md`. Секреты (CONVERTER_TOKEN, SSH-ключ, .env) — только на сервере/локально, НЕ в git.
+Целевой кабинет `venskons78.amocrm.ru` — **технический аккаунт** разработчика: виджет в нём НЕ исполняется автоматически (это режим аккаунта, не баг). Для ручного теста/демо используется букмарклет, грузящий `boot.js` со статики сервера (`widget-host/`, отдаётся nginx `/widget/`). **Прод-статика `/widget/` заморожена на версии, переданной в модерацию (0.2.0)** — sha256 `https://nexus-oko.naithon.one/widget/script.js` против `script.js` внутри `releases/nexus-looker-0.2.0.zip`; для e2e новых версий есть **dev-канал `/widget-dev/`** (`/opt/nexus-widget-dev/` + свой boot.js с заменённым BASE). Тестовые сделки с файлами всех форматов: 3200807 и 3177663. Реальный прод требует обычного рабочего аккаунта — см. `work_directory/04_reviews/08_autoload_investigation.md`. Секреты (CONVERTER_TOKEN, SSH-ключ, .env) — только на сервере/локально, НЕ в git.
 
 ## Учёт работ: план и «Прочие работы» (timechecker)
 
