@@ -12,15 +12,17 @@
   "repo_visibility": "public",
   "target_branch": "master",
   "dev_branch": "oleg",
-  "sync_times_msk": ["08:00", "14:00", "17:00"],
+  "sync_times_msk": [
+    "08:00",
+    "14:00",
+    "17:00"
+  ],
   "project_type": "lib",
   "install_cmd": "npm ci",
   "test_cmd": "npm test",
   "build_cmd": "npm run build",
   "run_cmd": "",
   "smoke_url": "",
-  "plane_workspace_slug": "nexus_system",
   "plane_identifier": "AMO",
-  "plane_project_id": "",
   "notes": "Репо и ветки (master+oleg, protection) созданы до wgp — publish шаг 7-9 пропускает создание. Кабинет разработки: venskons78.amocrm.ru; прод-кабинет: toolkeeper.amocrm.ru (доступ через Михаила, foringella@gmail.com). project_type=lib: артефакт — zip виджета, лестница гейта = npm ci + npm run build (+ тесты когда появятся); смоук — ручная проверка в кабинете amoCRM (помечать в рапорте)."
 }

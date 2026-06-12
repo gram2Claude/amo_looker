@@ -128,7 +128,8 @@
               "plane_identifier": "AMO-5",
               "plane_linked_cycle": true,
               "plane_linked_module": true,
-              "done_at": "2026-06-10"
+              "done_at": "2026-06-10",
+              "merge_sha": "43b6f890c317ffa1930c108910c29398636f2684"
             },
             {
               "id": "T5",
@@ -226,7 +227,8 @@
               "plane_identifier": "AMO-10",
               "plane_linked_cycle": true,
               "plane_linked_module": true,
-              "done_at": "2026-06-11"
+              "done_at": "2026-06-11",
+              "merge_sha": "43b6f890c317ffa1930c108910c29398636f2684"
             }
           ],
           "plane_cycle_id": "646ce2af-0c0f-47b1-9199-d735359f7df3"
@@ -256,7 +258,8 @@
               "plane_identifier": "AMO-11",
               "plane_linked_cycle": true,
               "plane_linked_module": true,
-              "done_at": "2026-06-11"
+              "done_at": "2026-06-11",
+              "merge_sha": "d99931673a57e95b67e62f9b7103ed1ce67472ab"
             },
             {
               "id": "T10",
@@ -273,7 +276,8 @@
               "plane_identifier": "AMO-12",
               "plane_linked_cycle": true,
               "plane_linked_module": true,
-              "done_at": "2026-06-11"
+              "done_at": "2026-06-11",
+              "merge_sha": "d99931673a57e95b67e62f9b7103ed1ce67472ab"
             },
             {
               "id": "T11",
@@ -290,7 +294,8 @@
               "plane_identifier": "AMO-13",
               "plane_linked_cycle": true,
               "plane_linked_module": true,
-              "done_at": "2026-06-11"
+              "done_at": "2026-06-11",
+              "merge_sha": "d99931673a57e95b67e62f9b7103ed1ce67472ab"
             }
           ],
           "plane_cycle_id": "9683e9c3-9c12-4e07-ada4-94781ff2a407"
@@ -332,7 +337,8 @@
               "plane_identifier": "AMO-14",
               "plane_linked_cycle": true,
               "plane_linked_module": true,
-              "done_at": "2026-06-11"
+              "done_at": "2026-06-11",
+              "merge_sha": "43b6f890c317ffa1930c108910c29398636f2684"
             },
             {
               "id": "T14",
@@ -396,7 +402,8 @@
               "plane_identifier": "AMO-17",
               "plane_linked_cycle": true,
               "plane_linked_module": true,
-              "done_at": "2026-06-11"
+              "done_at": "2026-06-11",
+              "merge_sha": "43b6f890c317ffa1930c108910c29398636f2684"
             }
           ],
           "plane_cycle_id": "7ecaa4bf-fe79-4ee7-a85b-542d687a04db"

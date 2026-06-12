@@ -1,12 +1,27 @@
 {
-  "plane_project_id": "abcd54db-b065-4c3e-8866-2a8b4f1bc280",
   "plane_identifier": "AMO",
-  "state_map": {
-    "started": "41adfcde-e159-47e0-b6cd-9bed1e42a72a",
-    "completed": "0d62a76d-2f1f-4f21-8906-db65d464d5e3",
-    "unstarted": "05dde656-9763-4bba-9f38-b461ddf829a9",
-    "backlog": "930f4be1-aa10-4ba6-9d76-2c244561511c",
-    "cancelled": "af0f42bd-47ae-4787-b429-4cf7846da775"
+  "published_at": "2026-06-10T13:36:56.925Z",
+  "pending_registry_done": [],
+  "branch_sha": {
+    "master": "b79077c2a77033f2ea8870eecfe4efff68cc8edb"
   },
-  "published_at": "2026-06-10T13:36:56.925Z"
+  "snapshot": {
+    "total_h": 65.75,
+    "done_h": 52.25,
+    "total_n": 21,
+    "done_n": 16,
+    "pct": 79,
+    "planned_finish": "2026-06-30",
+    "projected_finish": "2026-06-26",
+    "delta_days": -4,
+    "overdue": [],
+    "health": {
+      "db_ok": true,
+      "github_ok": true,
+      "pending_count": 0,
+      "baseline_status": "ok"
+    }
+  },
+  "last_sync": "2026-06-12T05:00:03.447Z",
+  "target_branch": "master"
 }
