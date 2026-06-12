@@ -6,6 +6,8 @@
 // same-origin хопе, на CORS-редиректе amo→drive→S3 credentialed-запрос
 // несовместим с ACAO:* (доказано разведкой, 01_dom_recon_amocrm.md).
 
+import { cacheGet, cachePut } from './cache.js';
+
 // Ошибка с ключом локализации (modal покажет langs.widget.errors[langKey]).
 export function keyedError(langKey, detail, langParams) {
   const e = new Error(detail || langKey);
@@ -22,7 +24,17 @@ export default class Loader {
 
   // Загрузить файл → { buf, bytes, contentType }. maxBytes проверяется ПОСЛЕ
   // загрузки по реальному размеру (content-length ненадёжен при chunked).
+  // Сессионный кэш (спека 04, этап 3.2): повторное открытие того же href в
+  // рамках page load не ходит в сеть; maxBytes применяется и к кэш-хиту
+  // (лимиты у рендереров разные). Кэшируются только успешные загрузки.
   async fetchBuffer(href, { maxBytes } = {}) {
+    const hit = cacheGet('src:' + href);
+    if (hit) {
+      if (maxBytes && hit.bytes > maxBytes) {
+        throw keyedError('too_large', 'bytes ' + hit.bytes, { limit: humanSize(maxBytes) });
+      }
+      return hit;
+    }
     const ctrl = new AbortController();
     this._controllers.add(ctrl);
     try {
@@ -38,7 +50,9 @@ export default class Loader {
       if (maxBytes && buf.byteLength > maxBytes) {
         throw keyedError('too_large', 'bytes ' + buf.byteLength, { limit: humanSize(maxBytes) });
       }
-      return { buf, bytes: buf.byteLength, contentType: resp.headers.get('content-type') || '' };
+      const result = { buf, bytes: buf.byteLength, contentType: resp.headers.get('content-type') || '' };
+      cachePut('src:' + href, result, { bytes: result.bytes });
+      return result;
     } finally {
       this._controllers.delete(ctrl);
     }

@@ -71,7 +71,9 @@ export function createWarmPool({
   }
 
   for (let i = 0; i < poolSize; i++) {
-    const w = { id: i, port: basePort + i, profile: `file:///tmp/uno-profile-${i}`, busy: false, state: 'dead', proc: null, respawnTimer: null, killing: false };
+    // ВАЖНО: --user-installation ждёт ОБЫЧНЫЙ путь (unoserver сам делает Path().as_uri();
+    // передача file:// URI роняет его с "relative path can't be expressed as a file URI").
+    const w = { id: i, port: basePort + i, profile: `/tmp/uno-profile-${i}`, busy: false, state: 'dead', proc: null, respawnTimer: null, killing: false };
     workers.push(w);
     bootWorker(w);
   }

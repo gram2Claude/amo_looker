@@ -33,7 +33,7 @@ FIX_CSV="${FIX_CSV:-work_directory/tests/fixtures/user_files/get_creatives_daily
 
 # reqid — X-Request-Id из ответа (появился в T24): джойн проб с серверными логами
 # при подсчёте гейта CDN (network_ms = total − server_ms − TLS).
-W='%{http_code},%{time_namelookup},%{time_connect},%{time_appconnect},%{time_pretransfer},%{time_starttransfer},%{time_total},%{size_upload},%{header{x-request-id}}'
+W='%{http_code},%{time_namelookup},%{time_connect},%{time_appconnect},%{time_pretransfer},%{time_starttransfer},%{time_total},%{size_upload},%header{x-request-id}'
 
 probe_get () { # cell url
   curl -sS -o /dev/null -w "$W" -H "Origin: $ORIGIN" "$2"
