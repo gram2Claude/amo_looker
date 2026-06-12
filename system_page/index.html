@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Nexus Looker · предпросмотр файлов в amoCRM — устройство системы</title>
+
+<style>
+/* Шрифты — JetBrains Mono (сабсеты, страница самодостаточна) */
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/jbm-400-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/jbm-400-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/jbm-500-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/jbm-500-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/jbm-600-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/jbm-600-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/jbm-700-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/jbm-700-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+
+/* Дизайн-токены (порт из лендинга Nexus, 1:1 с эталоном) */
+:root{
+  --c-bg:#0a0a0a;
+  --c-neutral:#ffffff;
+  --c-primary:#9ca3af;
+  --c-secondary:#111827;
+  --c-tertiary:#4b5563;
+  --c-surface:#e5e5e5;
+
+  --green:#16a34a;           /* локальная обработка / основной акцент */
+  --green-bright:#00ff41;    /* «живой» поток данных */
+  --yellow:#facc15;          /* наш сервер (транзит) */
+  --red:#dc2626;             /* внешний сервис (Microsoft) / ошибки */
+
+  --q-project:#38bdf8;       /* клиентская часть (виджет) */
+  --q-org:#a78bfa;           /* серверная часть (конвертер) */
+  --t-auto:#16a34a;
+  --t-sched:#f59e0b;
+  --t-manual:#9ca3af;
+
+  --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-body:'JetBrains Mono',"SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;
+
+  --space-sm:8px; --space-md:12px; --space-lg:16px; --space-xl:32px; --space-2xl:48px;
+  --radius-sm:2px; --radius-full:9999px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--c-bg);color:var(--c-neutral);
+  font-family:var(--font-body);font-size:13px;line-height:1.55;
+  overflow-x:hidden;-webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(156,163,175,0.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(156,163,175,0.035) 1px,transparent 1px);
+  background-size:120px 120px,120px 120px;
+  mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 85%);
+}
+.wrap{position:relative;z-index:10;max-width:1200px;margin:0 auto;padding:0 var(--space-xl);}
+
+.kicker{font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:var(--c-tertiary);display:inline-flex;align-items:center;gap:var(--space-sm);}
+.kicker::before{content:'';width:18px;height:1px;background:var(--green);display:inline-block;}
+h1{font-family:var(--font-display);font-weight:500;letter-spacing:-0.025em;font-size:clamp(34px,6vw,60px);line-height:1.05;color:var(--c-neutral);}
+h2{font-family:var(--font-display);font-weight:500;letter-spacing:-0.02em;font-size:clamp(24px,3.4vw,34px);line-height:1.1;color:var(--c-neutral);}
+.lead{color:var(--c-primary);font-size:15px;line-height:1.7;max-width:680px;}
+.lead b{color:#fff;}
+.lead .g{color:var(--green);}
+
+.hero{min-height:88vh;display:flex;flex-direction:column;justify-content:center;gap:var(--space-lg);padding:120px 0 80px;}
+.hero h1{margin:var(--space-md) 0;}
+.hero .accent{color:var(--green);}
+.hero-meta{display:flex;flex-wrap:wrap;gap:var(--space-md);margin-top:var(--space-lg);}
+.chip{border:1px solid var(--c-tertiary);border-radius:var(--radius-full);padding:5px var(--space-md);font-size:10px;letter-spacing:0.08em;color:var(--c-primary);display:inline-flex;align-items:center;gap:8px;background:rgba(10,10,10,0.5);}
+.chip .dot{width:7px;height:7px;border-radius:var(--radius-full);}
+.scroll-hint{margin-top:var(--space-2xl);color:var(--c-tertiary);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;display:flex;align-items:center;gap:8px;animation:pulse 2.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:0.45}50%{opacity:1}}
+
+.section{padding:64px 0;border-top:1px solid rgba(75,85,99,0.25);}
+.section-head{display:flex;flex-direction:column;gap:var(--space-md);margin-bottom:var(--space-2xl);}
+.section-num{font-size:11px;color:var(--green);letter-spacing:0.1em;}
+
+.diagram{position:relative;border:1px solid var(--c-tertiary);border-radius:var(--radius-sm);background:linear-gradient(180deg,rgba(17,24,39,0.55),rgba(10,10,10,0.55));box-shadow:rgba(0,0,0,0.35) -8px 8px 28px 0;overflow:hidden;}
+.diagram + .diagram{margin-top:var(--space-xl);}
+.diagram-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-md);padding:10px var(--space-lg);border-bottom:1px solid rgba(75,85,99,0.4);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--c-tertiary);background:rgba(10,10,10,0.5);}
+.diagram-bar .left{display:flex;align-items:center;gap:10px;}
+.diagram-bar .led{width:7px;height:7px;border-radius:50%;background:var(--green-bright);box-shadow:0 0 8px var(--green-bright);animation:pulse 2s ease-in-out infinite;}
+.diagram-body{padding:var(--space-xl);}
+.diagram svg{width:100%;height:auto;display:block;}
+.diagram-caption{padding:0 var(--space-xl) var(--space-xl);color:var(--c-primary);font-size:12px;line-height:1.7;}
+.diagram-caption b{color:var(--c-neutral);font-weight:600;}
+.diagram-caption .g{color:var(--green);}
+.diagram-caption .y{color:var(--yellow);}
+.diagram-caption .r{color:#f87171;}
+
+.overview{margin-top:var(--space-2xl);max-width:820px;color:var(--c-primary);font-size:13px;line-height:1.75;}
+.overview > p{margin-bottom:var(--space-md);}
+.overview b{color:var(--c-neutral);font-weight:600;}
+.overview .g{color:var(--green);}
+.overview h3{font-family:var(--font-display);font-size:16px;font-weight:500;color:var(--c-neutral);letter-spacing:-0.01em;margin:var(--space-lg) 0 var(--space-sm);}
+.overview ul{list-style:none;padding:0;margin:0 0 var(--space-md);}
+.overview li{position:relative;padding-left:18px;margin-bottom:7px;}
+.overview li::before{content:'▸';position:absolute;left:0;color:var(--green);}
+.overview code{font-family:var(--font-body);font-size:11.5px;color:var(--green);background:rgba(17,24,39,0.6);padding:1px 5px;border-radius:var(--radius-sm);}
+.overview .ov-group{display:flex;align-items:center;gap:var(--space-md);margin:var(--space-2xl) 0 var(--space-lg);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;font-weight:600;color:var(--c-neutral);}
+.overview .ov-group::before{content:'';width:24px;height:2px;background:var(--green);flex-shrink:0;}
+.overview .ov-group::after{content:'';flex:1;height:1px;background:rgba(75,85,99,0.4);}
+.overview .ov-group.proj{color:var(--q-project);}
+.overview .ov-group.proj::before{background:var(--q-project);}
+.overview .ov-group.org{color:var(--q-org);}
+.overview .ov-group.org::before{background:var(--q-org);}
+
+/* таблица «куда уходит файл» */
+.trig{display:grid;gap:1px;background:rgba(75,85,99,0.3);border:1px solid var(--c-tertiary);border-radius:var(--radius-sm);overflow:hidden;}
+.trig-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.6fr) minmax(0,1.6fr);gap:var(--space-md);padding:13px var(--space-lg);background:var(--c-bg);align-items:center;font-size:11.5px;position:relative;}
+.trig-row.head{background:rgba(17,24,39,0.65);color:var(--c-tertiary);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;}
+.trig-row .layer{color:#fff;font-weight:500;}
+.trig-row .who{color:var(--c-primary);}
+.trig-row .trg{color:var(--green);font-size:10.5px;}
+.trig-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;}
+.trig-row.t-local::before{background:var(--green);}
+.trig-row.t-server::before{background:var(--yellow);}
+.trig-row.t-ms::before{background:var(--red);}
+
+/* дерево эндпоинтов */
+.tree{font-size:11.5px;line-height:1.95;color:var(--c-primary);white-space:pre-wrap;}
+.tree .root{color:#fff;font-weight:600;}
+.tree .q{color:var(--green);}
+.tag{display:inline-block;font-size:8.5px;letter-spacing:0.05em;padding:1px 7px;border-radius:var(--radius-full);margin-left:6px;}
+.tag.priv{color:#fca5a5;border:1px solid rgba(220,38,38,0.5);background:rgba(220,38,38,0.08);}
+.tag.share{color:#86efac;border:1px solid rgba(22,163,74,0.5);background:rgba(22,163,74,0.08);}
+.tag.warn{color:#fde68a;border:1px solid rgba(245,158,11,0.5);background:rgba(245,158,11,0.08);}
+
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-lg);}
+.legend-group{border:1px solid rgba(75,85,99,0.4);border-radius:var(--radius-sm);padding:var(--space-lg);background:rgba(10,10,10,0.4);}
+.legend-group h3{font-family:var(--font-body);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--c-tertiary);margin-bottom:var(--space-md);font-weight:500;}
+.legend-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:11.5px;color:var(--c-primary);}
+.legend-row .swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+.legend-row .swatch.round{border-radius:50%;}
+
+svg text{font-family:var(--font-body);}
+.node-label{font-size:11px;fill:var(--c-neutral);}
+.node-sub{font-size:8.5px;fill:var(--c-primary);letter-spacing:0.04em;}
+.edge{fill:none;stroke:var(--c-tertiary);stroke-width:1.4;}
+.edge-label{font-size:8.5px;fill:var(--c-tertiary);letter-spacing:0.06em;text-transform:uppercase;}
+.packet{fill:var(--green-bright);}
+.packet-y{fill:var(--yellow);}
+.packet-r{fill:#f87171;}
+.node-box{fill:rgba(17,24,39,0.85);stroke:#4b5563;}
+
+footer{padding:64px 0 96px;border-top:1px solid rgba(75,85,99,0.25);color:var(--c-tertiary);font-size:11px;line-height:1.8;}
+footer code{color:var(--green);font-size:10.5px;}
+
+@media (max-width:760px){
+  .diagram-body{padding:var(--space-md);}
+  .trig-row{grid-template-columns:1fr;gap:5px;}
+  .trig-row.head{display:none;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ======================= HERO ======================= -->
+  <header class="hero">
+    <span class="kicker">Nexus Looker · amoCRM widget</span>
+    <h1>Предпросмотр файлов<br><span class="accent">прямо в карточке сделки</span></h1>
+    <p class="lead">
+      Глазик у каждого вложения в ленте amoCRM: клик — и PDF, картинка, таблица или
+      документ открываются в модалке <b>без скачивания</b>. Браузер делает максимум сам;
+      сервер подключается только там, где без него нельзя.
+    </p>
+    <div class="hero-meta">
+      <span class="chip"><span class="dot" style="background:var(--q-project)"></span>Виджет · JS в странице кабинета</span>
+      <span class="chip"><span class="dot" style="background:var(--q-org)"></span>Конвертер · Docker за nginx</span>
+      <span class="chip"><span class="dot" style="background:var(--green-bright)"></span>13 форматов · приватность по типам</span>
+    </div>
+    <div class="scroll-hint">↓ листай — данные придут в движение</div>
+  </header>
+
+  <!-- ======================= 0 · ПРОСТЫМИ СЛОВАМИ ======================= -->
+  <section class="section" id="overview">
+    <div class="section-head">
+      <span class="section-num">00 / Простыми словами</span>
+      <h2>Что это и из чего состоит</h2>
+    </div>
+
+    <div class="overview" style="margin-top:0">
+      <p><b>Nexus Looker</b> — виджет для amoCRM. Он добавляет кнопку-«глазик» рядом с каждым
+      вложением в ленте сделки или контакта. Клик по глазику открывает <b>модалку предпросмотра</b>:
+      файл можно посмотреть сразу, не скачивая на диск и не открывая сторонние программы.</p>
+
+      <p>Система состоит из двух частей и одного принципа:</p>
+
+      <div class="ov-group proj">Часть 1 · Виджет (в браузере пользователя)</div>
+      <ul>
+        <li>Живёт <b>в том же окне, что и amoCRM</b> (не iframe): следит за лентой, врезает глазики,
+            рисует модалку. Один файл <code>script.js</code> (~270 КБ), все зависимости встроены.</li>
+        <li>Файл вложения браузер качает <b>сам, из хранилища amo</b> — под сессией пользователя.
+            Виджету не нужны пароли и токены: их в коде просто нет.</li>
+        <li>PDF, картинки, текст, markdown рендерятся <span class="g">прямо в браузере</span> —
+            ни один байт не покидает компьютер пользователя.</li>
+      </ul>
+
+      <div class="ov-group org">Часть 2 · Конвертер (наш сервер)</div>
+      <ul>
+        <li>Office-файлы браузер показать не умеет — их обрабатывает наш сервис
+            <code>nexus-oko.naithon.one</code> (Node + LibreOffice в Docker, за nginx).</li>
+        <li>Старые форматы (<code>.doc .xls .ppt …</code>) конвертируются в PDF
+            <span class="g">прогретым пулом LibreOffice</span> — за полсекунды, и PDF возвращается в браузер.</li>
+        <li>Современные (<code>.docx .xlsx .pptx .csv</code>) показывает Microsoft Office viewer:
+            сервер на 5 минут публикует файл по одноразовому адресу, откуда его забирает Microsoft.</li>
+      </ul>
+
+      <p style="margin-top:24px"><b>Принцип:</b> данные идут по самому короткому из возможных путей.
+      Большинство кликов вообще не доходит до нашего сервера; на сервер уходят только форматы,
+      которые иначе не показать, — и это честно описано в политике конфиденциальности.</p>
+    </div>
+  </section>
+
+  <!-- ======================= 1 · АРХИТЕКТУРА ======================= -->
+  <section class="section" id="arch">
+    <div class="section-head">
+      <span class="section-num">01 / Архитектура</span>
+      <h2>Четыре участника, три потока</h2>
+      <p class="lead">Браузер пользователя — центр системы: он забирает файл из хранилища amo
+        и сам решает, рендерить локально или звать конвертер. <span class="g">Зелёный поток</span> —
+        локальные данные, <span style="color:var(--yellow)">жёлтый</span> — наш сервер,
+        <span style="color:#f87171">красный</span> — Microsoft viewer.</p>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-bar">
+        <span class="left"><span class="led"></span>system-map</span>
+        <span>browser · amo storage · converter · microsoft</span>
+      </div>
+      <div class="diagram-body">
+        <svg viewBox="0 0 1000 430" role="img" aria-label="Архитектура Nexus Looker">
+          <defs>
+            <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="3" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+            </marker>
+            <marker id="arrow-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/>
+            </marker>
+            <marker id="arrow-y" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/>
+            </marker>
+            <marker id="arrow-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#f87171"/>
+            </marker>
+            <!-- направляющие потоков -->
+            <path id="a_fetch" d="M700,105 H470"/>
+            <path id="a_local" d="M250,150 V210"/>
+            <path id="a_conv"  d="M250,260 C250,330 360,355 470,355"/>
+            <path id="a_back"  d="M470,330 C390,330 320,300 285,265"/>
+            <path id="a_pub"   d="M700,355 H790"/>
+            <path id="a_msget" d="M860,330 C860,260 800,200 740,160"/>
+          </defs>
+
+          <!-- рёбра -->
+          <use href="#a_fetch" class="edge" stroke="#16a34a" marker-end="url(#arrow-g)"/>
+          <use href="#a_local" class="edge" stroke="#16a34a" marker-end="url(#arrow-g)"/>
+          <use href="#a_conv"  class="edge" stroke="#b45309" marker-end="url(#arrow-y)"/>
+          <use href="#a_back"  class="edge" stroke="#b45309" stroke-dasharray="4 3" marker-end="url(#arrow-y)"/>
+          <use href="#a_pub"   class="edge" stroke="#b91c1c" marker-end="url(#arrow-r)"/>
+          <use href="#a_msget" class="edge" stroke="#b91c1c" stroke-dasharray="4 3" marker-end="url(#arrow-r)"/>
+
+          <!-- подписи рёбер -->
+          <text class="edge-label" x="585" y="93" text-anchor="middle" fill="#16a34a">fetch · same-origin · кука amo</text>
+          <text class="edge-label" x="263" y="185" fill="#16a34a">локальный рендер</text>
+          <text class="edge-label" x="330" y="385" text-anchor="middle" fill="#b45309">POST байты · office/legacy</text>
+          <text class="edge-label" x="345" y="282" text-anchor="middle" fill="#b45309">PDF назад</text>
+          <text class="edge-label" x="745" y="343" text-anchor="middle" fill="#f87171">uuid-url · TTL 5 мин</text>
+          <text class="edge-label" x="855" y="225" text-anchor="middle" fill="#f87171">viewer в iframe</text>
+
+          <!-- узлы -->
+          <g>
+            <rect x="60" y="60" width="410" height="200" rx="3" class="node-box" stroke="#38bdf8"/>
+            <text class="node-label" x="80" y="86">Браузер пользователя · страница amoCRM</text>
+            <rect x="80" y="100" width="110" height="44" rx="3" class="node-box"/>
+            <text class="node-label" x="135" y="119" text-anchor="middle" font-size="10">inject.js</text>
+            <text class="node-sub" x="135" y="133" text-anchor="middle">глазики в ленте</text>
+            <rect x="210" y="100" width="110" height="44" rx="3" class="node-box"/>
+            <text class="node-label" x="265" y="119" text-anchor="middle" font-size="10">modal.js</text>
+            <text class="node-sub" x="265" y="133" text-anchor="middle">окно + рендереры</text>
+            <rect x="340" y="100" width="110" height="44" rx="3" class="node-box"/>
+            <text class="node-label" x="395" y="119" text-anchor="middle" font-size="10">loader + cache</text>
+            <text class="node-sub" x="395" y="133" text-anchor="middle">fetch · LRU · abort</text>
+            <rect x="80" y="210" width="340" height="36" rx="3" fill="rgba(22,163,74,0.12)" stroke="#16a34a"/>
+            <text class="node-label" x="250" y="232" text-anchor="middle" font-size="10">pdf · image/svg · text · markdown — рендер на месте</text>
+          </g>
+          <g>
+            <rect x="700" y="60" width="240" height="90" rx="3" class="node-box"/>
+            <text class="node-label" x="820" y="95" text-anchor="middle">Хранилище amoCRM</text>
+            <text class="node-sub" x="820" y="113" text-anchor="middle">drive → S3 · файлы вложений</text>
+          </g>
+          <g>
+            <rect x="470" y="310" width="230" height="90" rx="3" class="node-box" stroke="#a78bfa"/>
+            <text class="node-label" x="585" y="340" text-anchor="middle">Конвертер · наш сервер</text>
+            <text class="node-sub" x="585" y="357" text-anchor="middle">nginx → Node → LibreOffice</text>
+            <text class="node-sub" x="585" y="372" text-anchor="middle">nexus-oko.naithon.one</text>
+          </g>
+          <g>
+            <rect x="790" y="310" width="150" height="90" rx="3" fill="rgba(220,38,38,0.10)" stroke="#b91c1c"/>
+            <text class="node-label" x="865" y="340" text-anchor="middle">Microsoft</text>
+            <text class="node-sub" x="865" y="357" text-anchor="middle">Office Online viewer</text>
+            <text class="node-sub" x="865" y="372" text-anchor="middle">docx · xlsx · pptx · csv</text>
+          </g>
+
+          <!-- пакеты -->
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#a_fetch"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.6s" begin="0.6s" repeatCount="indefinite"><mpath href="#a_local"/></animateMotion></circle>
+          <circle r="4" class="packet-y" filter="url(#glow)"><animateMotion dur="2.8s" begin="0.3s" repeatCount="indefinite"><mpath href="#a_conv"/></animateMotion></circle>
+          <circle r="4" class="packet-y" filter="url(#glow)"><animateMotion dur="2.8s" begin="1.7s" repeatCount="indefinite"><mpath href="#a_back"/></animateMotion></circle>
+          <circle r="4" class="packet-r" filter="url(#glow)"><animateMotion dur="2s" begin="0.9s" repeatCount="indefinite"><mpath href="#a_pub"/></animateMotion></circle>
+          <circle r="4" class="packet-r" filter="url(#glow)"><animateMotion dur="2.6s" begin="1.4s" repeatCount="indefinite"><mpath href="#a_msget"/></animateMotion></circle>
+        </svg>
+      </div>
+      <div class="diagram-caption">
+        Виджет живёт в том же окне, что и amoCRM, поэтому <b>файл качает браузер пользователя</b> —
+        под его сессией, <span class="g">с кукой amo</span>. Наш сервер никогда не ходит в amoCRM сам
+        и не видит учётных данных. Дальше — три маршрута: <span class="g">локальный рендер</span>
+        (большинство форматов), <span class="y">конвертация в PDF на нашем сервере</span> (старый Office)
+        и <span class="r">публикация для Microsoft viewer</span> (современный Office).
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= 2 · ПОТОК КЛИКА ======================= -->
+  <section class="section" id="flow">
+    <div class="section-head">
+      <span class="section-num">02 / Поток клика</span>
+      <h2>Что происходит за полсекунды</h2>
+      <p class="lead">От клика по глазику до картинки в модалке. Маршрут выбирается по
+        <b>расширению файла</b> — единственная таблица соответствия в <span class="g">fileUtils.js</span>.</p>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-bar">
+        <span class="left"><span class="led"></span>click-pipeline</span>
+        <span>inject → modal → loader → renderer</span>
+      </div>
+      <div class="diagram-body">
+        <svg viewBox="0 0 1000 280" role="img" aria-label="Поток обработки клика">
+          <defs>
+            <path id="f1" d="M170,90 H280"/>
+            <path id="f2" d="M410,90 H520"/>
+            <path id="f3" d="M650,90 H760"/>
+            <path id="f4" d="M820,120 V190 H700"/>
+            <path id="f5" d="M560,215 H330"/>
+          </defs>
+          <use href="#f1" class="edge" marker-end="url(#arrow)"/>
+          <use href="#f2" class="edge" marker-end="url(#arrow)"/>
+          <use href="#f3" class="edge" marker-end="url(#arrow-g)"/>
+          <use href="#f4" class="edge" stroke="#16a34a" marker-end="url(#arrow-g)"/>
+          <use href="#f5" class="edge" stroke="#16a34a" marker-end="url(#arrow-g)"/>
+
+          <text class="edge-label" x="225" y="78" text-anchor="middle">клик · capture-фаза</text>
+          <text class="edge-label" x="465" y="78" text-anchor="middle">kind по расширению</text>
+          <text class="edge-label" x="705" y="78" text-anchor="middle" fill="#16a34a">кэш? иначе fetch</text>
+          <text class="edge-label" x="838" y="160" fill="#16a34a">байты</text>
+          <text class="edge-label" x="445" y="203" text-anchor="middle" fill="#16a34a">готовый предпросмотр</text>
+
+          <g>
+            <rect x="40" y="60" width="130" height="60" rx="3" class="node-box"/>
+            <text class="node-label" x="105" y="86" text-anchor="middle">глазик</text>
+            <text class="node-sub" x="105" y="102" text-anchor="middle">listener на document</text>
+          </g>
+          <g>
+            <rect x="280" y="60" width="130" height="60" rx="3" class="node-box"/>
+            <text class="node-label" x="345" y="86" text-anchor="middle">модалка</text>
+            <text class="node-sub" x="345" y="102" text-anchor="middle">+ preconnect к серверам</text>
+          </g>
+          <g>
+            <rect x="520" y="60" width="130" height="60" rx="3" class="node-box"/>
+            <text class="node-label" x="585" y="86" text-anchor="middle">рендерер</text>
+            <text class="node-sub" x="585" y="102" text-anchor="middle">1 файл = 1 формат</text>
+          </g>
+          <g>
+            <rect x="760" y="60" width="180" height="60" rx="3" fill="rgba(22,163,74,0.12)" stroke="#16a34a"/>
+            <text class="node-label" x="850" y="86" text-anchor="middle">loader + LRU-кэш</text>
+            <text class="node-sub" x="850" y="102" text-anchor="middle">abort · revoke · лимиты</text>
+          </g>
+          <g>
+            <rect x="330" y="185" width="230" height="60" rx="3" fill="rgba(22,163,74,0.12)" stroke="#16a34a" stroke-dasharray="3 3"/>
+            <text class="node-label" x="445" y="211" text-anchor="middle">модалка показывает файл</text>
+            <text class="node-sub" x="445" y="227" text-anchor="middle">повторное открытие — из кэша, мгновенно</text>
+          </g>
+
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#f1"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.8s" begin="0.45s" repeatCount="indefinite"><mpath href="#f2"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.8s" begin="0.9s" repeatCount="indefinite"><mpath href="#f3"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="2.2s" begin="1.35s" repeatCount="indefinite"><mpath href="#f4"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="2.2s" begin="1.8s" repeatCount="indefinite"><mpath href="#f5"/></animateMotion></circle>
+        </svg>
+      </div>
+      <div class="diagram-caption">
+        Клик ловится <b>нативным обработчиком в capture-фазе</b> — amoCRM глушит обычные клики, capture
+        проходит всегда. Модалка заранее <span class="g">прогревает TLS-соединение</span> к конвертеру
+        (если формат серверный), пока loader качает файл. Закрытие модалки <b>отменяет</b> все незавершённые
+        загрузки и освобождает память. Неизвестный формат не уходит на сервер «на всякий случай» —
+        пользователь видит честное «скачать файл».
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= 3 · ПРИВАТНОСТЬ ======================= -->
+  <section class="section" id="privacy">
+    <div class="section-head">
+      <span class="section-num">03 / Приватность</span>
+      <h2>Куда уходит файл — по формату</h2>
+      <p class="lead">Главное продуктовое решение системы. Цвет слева: <span class="g">зелёный</span> —
+        не покидает браузер, <span style="color:var(--yellow)">жёлтый</span> — наш сервер транзитом,
+        <span style="color:#f87171">красный</span> — обрабатывает Microsoft.</p>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-bar">
+        <span class="left"><span class="led"></span>privacy-matrix</span>
+        <span>формат → маршрут → что остаётся</span>
+      </div>
+      <div class="diagram-body">
+        <div class="trig">
+          <div class="trig-row head"><span>Форматы</span><span>Маршрут</span><span>Что остаётся после показа</span></div>
+          <div class="trig-row t-local">
+            <span class="layer">pdf · jpg png gif webp svg · txt json log · md</span>
+            <span class="who">рендер в браузере: blob-URL → iframe / img / pre; markdown — без HTML; скрипты в svg не исполняются</span>
+            <span class="trg">ничего — память вкладки, очищается при закрытии</span>
+          </div>
+          <div class="trig-row t-server">
+            <span class="layer">doc · xls · ppt · rtf · odt ods odp</span>
+            <span class="who">байты → наш конвертер → LibreOffice → PDF → назад в браузер</span>
+            <span class="trg">ничего — файл живёт только в рамках запроса, имена не логируются</span>
+          </div>
+          <div class="trig-row t-ms">
+            <span class="layer">docx · pptx · xlsx · csv</span>
+            <span class="who">байты → наш сервер → одноразовый uuid-адрес → Microsoft Office viewer</span>
+            <span class="trg">файл удаляется через 5 минут; у Microsoft — по их политике</span>
+          </div>
+        </div>
+      </div>
+      <div class="diagram-caption">
+        Маппинг «расширение → маршрут» живёт в <b>одном файле</b> (<span class="g">fileUtils.js</span>) —
+        поведение формата меняется в одной точке. Выбор Microsoft viewer для современного Office —
+        осознанный компромисс (идеальный рендер сложных документов), раскрытый в политике
+        конфиденциальности; всё остальное обрабатывается своими средствами.
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= 4 · КОНВЕРТЕР ======================= -->
+  <section class="section" id="converter">
+    <div class="section-head">
+      <span class="section-num">04 / Конвертер</span>
+      <h2>Эшелоны защиты и прогретый пул</h2>
+      <p class="lead">Сервис публичный (авторизация — по Origin кабинета amoCRM/Kommo), поэтому
+        вход охраняет <b>эшелон лимитов</b>, а конвертирует — <span class="g">тёплый пул LibreOffice</span>:
+        полсекунды на типичный документ вместо запуска офиса с нуля.</p>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-bar">
+        <span class="left"><span class="led"></span>converter-internals</span>
+        <span>auth → limits → queue → warm pool | cold</span>
+      </div>
+      <div class="diagram-body">
+        <svg viewBox="0 0 1000 330" role="img" aria-label="Внутреннее устройство конвертера">
+          <defs>
+            <path id="c1" d="M120,165 H200"/>
+            <path id="c2" d="M330,165 H410"/>
+            <path id="c3" d="M540,165 H620"/>
+            <path id="c4" d="M750,140 C790,110 810,95 840,85"/>
+            <path id="c5" d="M750,190 C790,220 810,235 840,245"/>
+          </defs>
+          <use href="#c1" class="edge" marker-end="url(#arrow)"/>
+          <use href="#c2" class="edge" marker-end="url(#arrow)"/>
+          <use href="#c3" class="edge" marker-end="url(#arrow)"/>
+          <use href="#c4" class="edge" stroke="#16a34a" marker-end="url(#arrow-g)"/>
+          <use href="#c5" class="edge" stroke="#b45309" marker-end="url(#arrow-y)"/>
+
+          <text class="edge-label" x="160" y="152" text-anchor="middle">тело ещё не читается</text>
+          <text class="edge-label" x="370" y="152" text-anchor="middle">окно 60 с</text>
+          <text class="edge-label" x="580" y="152" text-anchor="middle">очередь</text>
+          <text class="edge-label" x="816" y="92" fill="#16a34a">файл ≤ 2 МБ</text>
+          <text class="edge-label" x="814" y="244" fill="#b45309">файл &gt; 2 МБ</text>
+
+          <g>
+            <rect x="30" y="135" width="90" height="60" rx="3" class="node-box"/>
+            <text class="node-label" x="75" y="161" text-anchor="middle">nginx</text>
+            <text class="node-sub" x="75" y="177" text-anchor="middle">TLS · h2 · limit_req</text>
+          </g>
+          <g>
+            <rect x="200" y="135" width="130" height="60" rx="3" class="node-box"/>
+            <text class="node-label" x="265" y="156" text-anchor="middle">auth-гейт</text>
+            <text class="node-sub" x="265" y="171" text-anchor="middle">Origin-паттерн / токен</text>
+            <text class="node-sub" x="265" y="184" text-anchor="middle">ДО буферизации тела</text>
+          </g>
+          <g>
+            <rect x="410" y="135" width="130" height="60" rx="3" class="node-box"/>
+            <text class="node-label" x="475" y="156" text-anchor="middle">лимиты</text>
+            <text class="node-sub" x="475" y="171" text-anchor="middle">rate: origin + ip</text>
+            <text class="node-sub" x="475" y="184" text-anchor="middle">inflight-кап · 50 МБ</text>
+          </g>
+          <g>
+            <rect x="620" y="135" width="130" height="60" rx="3" class="node-box"/>
+            <text class="node-label" x="685" y="156" text-anchor="middle">p-limit (2)</text>
+            <text class="node-sub" x="685" y="171" text-anchor="middle">2 конвертации разом</text>
+            <text class="node-sub" x="685" y="184" text-anchor="middle">кап очереди → 503</text>
+          </g>
+          <g>
+            <rect x="840" y="40" width="130" height="90" rx="3" fill="rgba(22,163,74,0.12)" stroke="#16a34a"/>
+            <text class="node-label" x="905" y="66" text-anchor="middle">warm-пул</text>
+            <text class="node-sub" x="905" y="83" text-anchor="middle">2 тёплых LibreOffice</text>
+            <text class="node-sub" x="905" y="97" text-anchor="middle">~0.5 с на документ</text>
+            <text class="node-sub" x="905" y="111" text-anchor="middle">самолечение воркеров</text>
+          </g>
+          <g>
+            <rect x="840" y="200" width="130" height="90" rx="3" fill="rgba(245,158,11,0.10)" stroke="#b45309"/>
+            <text class="node-label" x="905" y="226" text-anchor="middle">cold-путь</text>
+            <text class="node-sub" x="905" y="243" text-anchor="middle">свежий soffice на запрос</text>
+            <text class="node-sub" x="905" y="257" text-anchor="middle">не занимает пул</text>
+            <text class="node-sub" x="905" y="271" text-anchor="middle">= режим отката</text>
+          </g>
+
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#c1"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.6s" begin="0.4s" repeatCount="indefinite"><mpath href="#c2"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.6s" begin="0.8s" repeatCount="indefinite"><mpath href="#c3"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.8s" begin="1.2s" repeatCount="indefinite"><mpath href="#c4"/></animateMotion></circle>
+          <circle r="4" class="packet-y" filter="url(#glow)"><animateMotion dur="1.8s" begin="1.5s" repeatCount="indefinite"><mpath href="#c5"/></animateMotion></circle>
+        </svg>
+      </div>
+      <div class="diagram-caption">
+        <b>Auth стоит до чтения тела</b>: чужой запрос отбрасывается раньше, чем сервер потратит память
+        на его файл. Origin подделывается из консоли — это принятый риск: реальную защиту даёт эшелон
+        (rate-limit по кабинету и IP, глобальный кап запросов, очередь, лимиты nginx). Конвертация:
+        <span class="g">тёплые воркеры LibreOffice</span> для типичных файлов (~0.5 с) и
+        <span class="y">холодный путь</span> для тяжёлых (&gt;2 МБ) — он же мгновенный откат всего
+        режима одной переменной. Зависший воркер убивается по таймауту и перезапускается; деградировавший —
+        лечится сам (recycle после 2 ошибок подряд и профилактически после 100 задач). Каждый запрос
+        оставляет тайминг-запись <b>без имён файлов и IP</b> — только тип, размер, длительности, страна.
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= 5 · КЭШ КЛИЕНТА ======================= -->
+  <section class="section" id="cache">
+    <div class="section-head">
+      <span class="section-num">05 / Кэш клиента</span>
+      <h2>Повторное открытие — мгновенно</h2>
+      <p class="lead">Сессионный LRU-кэш в памяти вкладки (100 МБ · 16 записей): три слоя
+        перехватывают маршрут на разной глубине. Кэшируются <b>байты, а не ссылки</b> —
+        память освобождается честно.</p>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-bar">
+        <span class="left"><span class="led"></span>client-cache</span>
+        <span>3 слоя · src / pdf / office · page lifetime</span>
+      </div>
+      <div class="diagram-body">
+        <svg viewBox="0 0 1000 260" role="img" aria-label="Слои клиентского кэша">
+          <defs>
+            <path id="k1" d="M205,80 H320"/>
+            <path id="k2" d="M530,80 H645"/>
+            <path id="k3" d="M855,110 V170 H205 V128"/>
+          </defs>
+          <use href="#k1" class="edge" marker-end="url(#arrow)"/>
+          <use href="#k2" class="edge" marker-end="url(#arrow)"/>
+          <use href="#k3" class="edge" stroke="#16a34a" stroke-dasharray="4 3" marker-end="url(#arrow-g)"/>
+          <text class="edge-label" x="262" y="68" text-anchor="middle">мимо кэша — в сеть</text>
+          <text class="edge-label" x="588" y="68" text-anchor="middle">мимо кэша — на сервер</text>
+          <text class="edge-label" x="530" y="187" text-anchor="middle" fill="#16a34a">повторное открытие: все три слоя отвечают из памяти</text>
+
+          <g>
+            <rect x="60" y="50" width="145" height="78" rx="3" fill="rgba(22,163,74,0.12)" stroke="#16a34a"/>
+            <text class="node-label" x="132" y="76" text-anchor="middle">src:‹href›</text>
+            <text class="node-sub" x="132" y="93" text-anchor="middle">байты из amo S3</text>
+            <text class="node-sub" x="132" y="107" text-anchor="middle">все форматы</text>
+          </g>
+          <g>
+            <rect x="320" y="50" width="210" height="78" rx="3" fill="rgba(22,163,74,0.12)" stroke="#16a34a"/>
+            <text class="node-label" x="425" y="76" text-anchor="middle">pdf:‹href›</text>
+            <text class="node-sub" x="425" y="93" text-anchor="middle">готовый PDF от конвертера</text>
+            <text class="node-sub" x="425" y="107" text-anchor="middle">legacy-форматы — без повторной конвертации</text>
+          </g>
+          <g>
+            <rect x="645" y="50" width="210" height="78" rx="3" fill="rgba(22,163,74,0.12)" stroke="#16a34a"/>
+            <text class="node-label" x="750" y="76" text-anchor="middle">office:‹href›</text>
+            <text class="node-sub" x="750" y="93" text-anchor="middle">preview-url Microsoft viewer</text>
+            <text class="node-sub" x="750" y="107" text-anchor="middle">TTL 5 мин − зазор · без повторного аплоада</text>
+          </g>
+
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.7s" repeatCount="indefinite"><mpath href="#k1"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="1.7s" begin="0.5s" repeatCount="indefinite"><mpath href="#k2"/></animateMotion></circle>
+          <circle r="4" class="packet" filter="url(#glow)"><animateMotion dur="3.2s" begin="1s" repeatCount="indefinite"><mpath href="#k3"/></animateMotion></circle>
+        </svg>
+      </div>
+      <div class="diagram-caption">
+        Первый показ файла наполняет слои; повторный клик по тому же вложению <b>не делает ни одного
+        сетевого запроса</b>: локальные форматы и legacy-PDF рендерятся из байтов в памяти, office
+        переиспользует действующий preview-адрес в пределах его жизни. Кэш живёт ровно столько,
+        сколько открыта вкладка amoCRM, — <span class="g">ничего не пишется на диск</span>, приватность
+        не меняется. Вытеснение — по объёму и числу записей (LRU); неудачные загрузки не кэшируются.
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= 6 · КАРТА СЕРВЕРА ======================= -->
+  <section class="section" id="endpoints">
+    <div class="section-head">
+      <span class="section-num">06 / Карта сервера</span>
+      <h2>Эндпоинты и хранилища</h2>
+      <p class="lead">Один домен за nginx, контейнер опубликован только на loopback —
+        снаружи всё ходит через TLS-фронт.</p>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-bar">
+        <span class="left"><span class="led"></span>endpoint-map</span>
+        <span>nexus-oko.naithon.one · nginx → docker</span>
+      </div>
+      <div class="diagram-body">
+<div class="tree"><span class="root">nexus-oko.naithon.one</span> · nginx 1.24 · TLS (Let's Encrypt) · http/2
+├─ <span class="q">POST /convert</span> — старый Office → PDF<span class="tag share">транзит · ничего не хранит</span>
+├─ <span class="q">POST /preview-host</span> — публикация для Microsoft viewer<span class="tag warn">TTL 5 минут</span>
+├─ <span class="q">GET /preview/‹uuid›</span> — одноразовые файлы для viewer<span class="tag warn">no-store · noindex</span>
+├─ <span class="q">GET /health</span> — проверка живости
+├─ <span class="q">/widget/</span> — статика виджета для ручного теста<span class="tag share">= релизный архив, сверка sha256</span>
+├─ <span class="q">/widget-dev/</span> — dev-канал для проверки новых версий
+├─ <span class="q">/legal/</span> — политика конфиденциальности и поддержка (ru/en)
+└─ <span class="root">контейнер nexus-converter</span> · Docker
+   ├─ Node (Express) · auth → лимиты → очередь · тайминг-логи<span class="tag share">без имён файлов и IP</span>
+   ├─ LibreOffice · warm-пул ×2 + cold-путь · таймаут 40 с
+   ├─ non-root (uid 10001) · mem 2 ГБ · pids 256 · tmpfs /tmp
+   └─ секреты (.env) — только на сервере<span class="tag priv">в git не попадают</span></div>
+      </div>
+      <div class="diagram-caption">
+        Прод-статика <b>/widget/</b> всегда байт-в-байт равна релизному архиву (проверяется хэшем) —
+        в кабинетах исполняется ровно тот код, что прошёл проверку. Новые версии живут на
+        <b>/widget-dev/</b> и не касаются боевого канала.
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= 7 · ЛЕГЕНДА ======================= -->
+  <section class="section" id="legend">
+    <div class="section-head">
+      <span class="section-num">07 / Легенда</span>
+      <h2>Как читать схемы</h2>
+    </div>
+    <div class="legend">
+      <div class="legend-group">
+        <h3>Потоки данных</h3>
+        <div class="legend-row"><span class="swatch round" style="background:var(--green-bright)"></span>локальные данные / живой поток</div>
+        <div class="legend-row"><span class="swatch round" style="background:var(--yellow)"></span>транзит через наш сервер</div>
+        <div class="legend-row"><span class="swatch round" style="background:#f87171"></span>внешний сервис (Microsoft)</div>
+      </div>
+      <div class="legend-group">
+        <h3>Узлы</h3>
+        <div class="legend-row"><span class="swatch" style="background:rgba(22,163,74,0.25);border:1px solid #16a34a"></span>зелёная рамка — данные не утекают</div>
+        <div class="legend-row"><span class="swatch" style="background:rgba(17,24,39,0.9);border:1px solid #4b5563"></span>серая — обычный компонент</div>
+        <div class="legend-row"><span class="swatch" style="background:rgba(220,38,38,0.15);border:1px solid #b91c1c"></span>красная — внешняя сторона</div>
+      </div>
+      <div class="legend-group">
+        <h3>Части системы</h3>
+        <div class="legend-row"><span class="swatch round" style="background:var(--q-project)"></span>виджет (браузер пользователя)</div>
+        <div class="legend-row"><span class="swatch round" style="background:var(--q-org)"></span>конвертер (наш сервер)</div>
+        <div class="legend-row"><span class="swatch round" style="background:var(--t-manual)"></span>пунктир — ответный/возвратный поток</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Nexus Looker · системная страница. Первоисточники: <code>CLAUDE.md</code>,
+    спека <code>work_directory/01_specs/04_geo_performance_spec.md</code>,
+    политика конфиденциальности <code>/legal/privacy_ru.html</code>.</p>
+    <p>Страница автономна: один HTML + локальные шрифты, без внешних запросов и скриптов.</p>
+  </footer>
+
+</div>
+</body>
+</html>
