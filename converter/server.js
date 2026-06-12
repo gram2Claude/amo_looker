@@ -10,12 +10,22 @@
 import { readdir, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createApp } from './app.js';
-import { convert } from './convert.js';
+import { convert as coldConvert } from './convert.js';
+import { createWarmPool } from './warm.js';
 
 const PORT = Number(process.env.PORT || 8094);
 const HOST = process.env.HOST || '0.0.0.0';  // в docker; изоляцию даёт publish на 127.0.0.1 хоста
 
+// CONVERT_MODE=warm — прогретый пул unoserver (спека 04, этап 1.1);
+// cold — старый per-request spawn (откат одним env'ом, образ не пересобирать).
+const MODE = (process.env.CONVERT_MODE || 'cold').toLowerCase();
+const pool = MODE === 'warm' ? createWarmPool() : null;
+const convert = pool ? pool.convert : coldConvert;
+
 const { app, cfg } = createApp({ convert });
+
+process.on('SIGTERM', () => { if (pool) pool.shutdown(); process.exit(0); });
+process.on('SIGINT',  () => { if (pool) pool.shutdown(); process.exit(0); });
 
 // TTL-очистка временных preview-файлов (ушедших к Microsoft) — каждую минуту
 // (окно экспозиции = TTL; чаще уборка → меньше «хвост» при всплеске загрузок).
@@ -32,6 +42,6 @@ setInterval(async () => {
 }, 60 * 1000);
 
 app.listen(PORT, HOST, () => {
-  console.log(`[nexus-converter] listening on ${HOST}:${PORT}, concurrency=${cfg.CONCURRENCY}, max=${cfg.MAX_BYTES}B, origin=${cfg.ALLOWED_ORIGIN_PATTERN}`);
+  console.log(`[nexus-converter] listening on ${HOST}:${PORT}, mode=${MODE}, concurrency=${cfg.CONCURRENCY}, max=${cfg.MAX_BYTES}B, origin=${cfg.ALLOWED_ORIGIN_PATTERN}`);
   if (!cfg.TOKEN) console.warn('[nexus-converter] CONVERTER_TOKEN не задан — служебный токен-путь отключён (Origin-путь работает)');
 });

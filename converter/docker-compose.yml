@@ -14,13 +14,17 @@ services:
       MAX_BYTES: "52428800"
       CONVERT_TIMEOUT_MS: "30000"
       CONCURRENCY: "2"
+      # Прогретый пул LibreOffice (спека 04, этап 1.1); cold = откат к per-request spawn
+      CONVERT_MODE: "warm"
       # Публичная схема: любой кабинет amoCRM/Kommo (однометочный поддомен).
       # Переопределяется при необходимости сузить до конкретных кабинетов.
       ALLOWED_ORIGIN_PATTERN: "^https://[a-z0-9][a-z0-9-]{0,62}\\.(amocrm\\.(ru|com)|kommo\\.com)$"
       RATE_LIMIT_PER_MIN: "30"        # на кабинет (Origin)
       RATE_LIMIT_PER_MIN_IP: "60"     # на IP (ловит ротацию поддоменов)
       MAX_RATE_KEYS: "5000"           # кап map лимитера (анти-OOM)
-      MAX_INFLIGHT: "16"              # одновременных запросов с телом (анти-RAM-DoS)
+      # 16 → 8 при включении warm-пула (codex-ревью E4): 2 постоянных LO-воркера
+      # (~400МБ каждый) + 8×50МБ буферов тел укладываются в mem_limit 2g
+      MAX_INFLIGHT: "8"               # одновременных запросов с телом (анти-RAM-DoS)
       PREVIEW_DIR: "/preview"
       PREVIEW_BASE_URL: "https://nexus-oko.naithon.one"
       PREVIEW_TTL_MS: "300000"        # 5 мин — окно экспозиции файла для Microsoft
