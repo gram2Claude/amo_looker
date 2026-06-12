@@ -46,6 +46,30 @@ describe('Loader.fetchBuffer', () => {
   });
 });
 
+describe('Loader: disposed-гейт (ревью E4 — кэш-хиты после закрытия модалки)', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('objectURL на disposed-лоадере → AbortError, URL не создаётся', () => {
+    const createURL = vi.fn(() => 'blob:leak');
+    globalThis.URL.createObjectURL = createURL;
+    globalThis.URL.revokeObjectURL = vi.fn();
+    const loader = new Loader();
+    loader.dispose();
+    expect(() => loader.objectURL(new ArrayBuffer(4), 'application/pdf'))
+      .toThrowError(expect.objectContaining({ name: 'AbortError' }));
+    expect(createURL).not.toHaveBeenCalled();
+  });
+
+  it('fetchBuffer/post на disposed-лоадере → AbortError без сети', async () => {
+    globalThis.fetch = vi.fn();
+    const loader = new Loader();
+    loader.dispose();
+    await expect(loader.fetchBuffer('https://x/a')).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(loader.post('https://x/b', new ArrayBuffer(1), {})).rejects.toMatchObject({ name: 'AbortError' });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
 describe('Loader.dispose', () => {
   it('отменяет незавершённые загрузки и ревокает objectURL', async () => {
     const revoke = vi.fn();

@@ -1,5 +1,6 @@
 import { detectKind } from './fileUtils.js';
 import { makeT } from './i18n.js';
+import { warmConnections } from './preconnect.js';
 import Loader from './loader.js';
 import pdf    from './renderers/pdf.js';
 import image  from './renderers/image.js';
@@ -57,6 +58,10 @@ export default class Modal {
       this._showError($body, this._tErr('unsupported'));
       return;
     }
+
+    // Прогрев TLS к конвертеру/Office viewer (спека 04, этап 3.1): пока файл
+    // качается из amo, рукопожатие уже сделано — POST уходит в тёплый сокет.
+    warmConnections($, kind);
 
     const loader = this._loader = new Loader();
     const renderer = RENDERERS[kind] || RENDERERS.legacy;

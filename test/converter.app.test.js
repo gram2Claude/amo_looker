@@ -267,3 +267,72 @@ describe('/health', () => {
     expect(r.body).toEqual({ status: 'ok' });
   });
 });
+
+describe('тайминг-логи + X-Request-Id (спека 04, этап 1.2)', () => {
+  function makeLoggedApp(config = {}, convertImpl) {
+    const lines = [];
+    const app = makeApp({ LOG: (l) => lines.push(l), ...config }, convertImpl);
+    return { app, lines };
+  }
+
+  it('успешный /convert: ровно одна строка с полным набором полей, id = заголовку', async () => {
+    const { app, lines } = makeLoggedApp();
+    const r = await post(app).set('Origin', OK_ORIGIN).send(Buffer.from('doc-bytes'));
+    expect(r.status).toBe(200);
+    expect(lines.length).toBe(1);
+    const m = JSON.parse(lines[0]);
+    expect(m.evt).toBe('convert');
+    expect(m.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(r.headers['x-request-id']).toBe(m.id);
+    expect(m.ext).toBe('doc');
+    expect(m.bytes).toBe(9);
+    expect(m.queueMs).toBeGreaterThanOrEqual(0);
+    expect(m.convertMs).toBeGreaterThanOrEqual(0);
+    expect(m.totalMs).toBeGreaterThanOrEqual(0);
+    expect(m.outcome).toBe(200);
+    expect(m.country).toBe('unknown');
+  });
+
+  it('в логе нет имени файла (инвариант приватности)', async () => {
+    const { app, lines } = makeLoggedApp();
+    await post(app).set('Origin', OK_ORIGIN)
+      .set('X-Filename', encodeURIComponent('секретное_КП_клиента.doc')).send(Buffer.from('x'));
+    expect(lines.length).toBe(1);
+    expect(lines[0]).not.toContain('КП');
+    expect(lines[0]).not.toContain(encodeURIComponent('секретное_КП_клиента.doc'));
+  });
+
+  it('401 без auth тоже логируется (timing стоит ДО requireAuth)', async () => {
+    const { app, lines } = makeLoggedApp();
+    const r = await post(app).send(Buffer.from('x'));
+    expect(r.status).toBe(401);
+    expect(lines.length).toBe(1);
+    expect(JSON.parse(lines[0]).outcome).toBe(401);
+  });
+
+  it('страна берётся из CF-IPCountry; X-Request-Id экспонирован для CORS', async () => {
+    const { app, lines } = makeLoggedApp();
+    const r = await post(app).set('Origin', OK_ORIGIN).set('CF-IPCountry', 'SG').send(Buffer.from('x'));
+    expect(JSON.parse(lines[0]).country).toBe('SG');
+    expect(r.headers['access-control-expose-headers']).toContain('X-Request-Id');
+  });
+
+  it('/preview-host: csv даёт convertMs, прямая публикация — нет', async () => {
+    const { app, lines } = makeLoggedApp();
+    await post(app, '/preview-host').set('Origin', OK_ORIGIN)
+      .set('X-Filename', 'a.csv').send(Buffer.from('a;b'));
+    await post(app, '/preview-host').set('Origin', OK_ORIGIN)
+      .set('X-Filename', 'b.xlsx').send(Buffer.from('xlsx'));
+    const [csv, xlsx] = lines.map((l) => JSON.parse(l));
+    expect(csv.evt).toBe('preview');
+    expect(csv.convertMs).toBeGreaterThanOrEqual(0);
+    expect(xlsx.convertMs).toBeNull();
+    expect(xlsx.ext).toBe('xlsx');
+  });
+
+  it('OPTIONS preflight не логируется', async () => {
+    const { app, lines } = makeLoggedApp();
+    await request(app).options('/convert').set('Origin', OK_ORIGIN);
+    expect(lines.length).toBe(0);
+  });
+});

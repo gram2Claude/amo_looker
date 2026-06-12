@@ -6,6 +6,8 @@
 // same-origin хопе, на CORS-редиректе amo→drive→S3 credentialed-запрос
 // несовместим с ACAO:* (доказано разведкой, 01_dom_recon_amocrm.md).
 
+import { cacheGet, cachePut } from './cache.js';
+
 // Ошибка с ключом локализации (modal покажет langs.widget.errors[langKey]).
 export function keyedError(langKey, detail, langParams) {
   const e = new Error(detail || langKey);
@@ -18,11 +20,23 @@ export default class Loader {
   constructor() {
     this._controllers = new Set();
     this._urls = new Set();
+    this._disposed = false;
   }
 
   // Загрузить файл → { buf, bytes, contentType }. maxBytes проверяется ПОСЛЕ
   // загрузки по реальному размеру (content-length ненадёжен при chunked).
+  // Сессионный кэш (спека 04, этап 3.2): повторное открытие того же href в
+  // рамках page load не ходит в сеть; maxBytes применяется и к кэш-хиту
+  // (лимиты у рендереров разные). Кэшируются только успешные загрузки.
   async fetchBuffer(href, { maxBytes } = {}) {
+    if (this._disposed) throw abortError();
+    const hit = cacheGet('src:' + href);
+    if (hit) {
+      if (maxBytes && hit.bytes > maxBytes) {
+        throw keyedError('too_large', 'bytes ' + hit.bytes, { limit: humanSize(maxBytes) });
+      }
+      return hit;
+    }
     const ctrl = new AbortController();
     this._controllers.add(ctrl);
     try {
@@ -38,7 +52,9 @@ export default class Loader {
       if (maxBytes && buf.byteLength > maxBytes) {
         throw keyedError('too_large', 'bytes ' + buf.byteLength, { limit: humanSize(maxBytes) });
       }
-      return { buf, bytes: buf.byteLength, contentType: resp.headers.get('content-type') || '' };
+      const result = { buf, bytes: buf.byteLength, contentType: resp.headers.get('content-type') || '' };
+      cachePut('src:' + href, result, { bytes: result.bytes });
+      return result;
     } finally {
       this._controllers.delete(ctrl);
     }
@@ -47,6 +63,7 @@ export default class Loader {
   // POST на внешний сервис (конвертер). Отдельно от fetchBuffer: cross-origin,
   // без credentials. Тоже отменяется при dispose().
   async post(url, body, headers) {
+    if (this._disposed) throw abortError();
     const ctrl = new AbortController();
     this._controllers.add(ctrl);
     try {
@@ -57,7 +74,11 @@ export default class Loader {
   }
 
   // Создать blob: URL под уже загруженный буфер; трекается для revoke в dispose().
+  // На disposed-лоадере НЕ создаём: кэш-хиты резолвятся синхронно, и continuation
+  // рендерера может добежать сюда после закрытия модалки — URL никогда не был бы
+  // revoked (находка ревью E4). AbortError рендереры глотают как «модалку закрыли».
   objectURL(buf, type) {
+    if (this._disposed) throw abortError();
     const url = URL.createObjectURL(new Blob([buf], type ? { type } : undefined));
     this._urls.add(url);
     return url;
@@ -65,11 +86,17 @@ export default class Loader {
 
   // Отменить все незавершённые загрузки и освободить objectURL'ы.
   dispose() {
+    this._disposed = true;
     this._controllers.forEach((c) => { try { c.abort(); } catch (e) { /* already done */ } });
     this._controllers.clear();
     this._urls.forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
     this._urls.clear();
   }
+}
+
+// Единый AbortError (modal/рендереры узнают его по name и молча игнорируют).
+function abortError() {
+  return Object.assign(new Error('loader disposed'), { name: 'AbortError' });
 }
 
 // Число мегабайт без единицы измерения: единица живёт в локализованном тексте

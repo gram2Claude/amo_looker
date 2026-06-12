@@ -48,6 +48,8 @@ export function createApp({ convert, config = {} } = {}) {
     // inflight освобождается на close сокета — оборванные запросы иначе копили бы
     // body-буферы в ожидании soffice. Отклоняем 503 до постановки в очередь.
     MAX_QUEUE: Number(process.env.MAX_QUEUE || 24),
+    // Тайминг-логи (спека 04, этап 1.2) — инжектится в тестах
+    LOG: (line) => console.log(line),
     ...config
   };
   const originRe = new RegExp(cfg.ALLOWED_ORIGIN_PATTERN, 'i');
@@ -79,7 +81,35 @@ export function createApp({ convert, config = {} } = {}) {
     }
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Filename');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
     res.setHeader('Access-Control-Max-Age', '86400');
+  }
+
+  // Тайминг-лог на запрос (спека 04, этап 1.2): request id, ext, размер, queue/convert/total,
+  // исход, страна (CF-IPCountry появится за CDN; до того unknown). Имена файлов и IP
+  // НЕ логируются — инвариант приватности. Стоит ДО requireAuth: 401/429/503 тоже видны.
+  function makeTiming(evt) {
+    return function timing(req, res, next) {
+      if (req.method === 'OPTIONS') return next();
+      const t0 = Date.now();
+      req.metrics = { id: randomUUID(), ext: null, bytes: 0, queueMs: null, convertMs: null };
+      res.setHeader('X-Request-Id', req.metrics.id);
+      let logged = false;
+      const emit = () => {
+        if (logged) return;
+        logged = true;
+        const m = req.metrics;
+        cfg.LOG(JSON.stringify({
+          evt, id: m.id, ext: m.ext, bytes: m.bytes,
+          queueMs: m.queueMs, convertMs: m.convertMs, totalMs: Date.now() - t0,
+          outcome: res.writableEnded ? res.statusCode : 'aborted',
+          country: req.headers['cf-ipcountry'] || 'unknown'
+        }));
+      };
+      res.on('finish', emit);
+      res.on('close', emit);
+      next();
+    };
   }
 
   // Auth-gate ДО body-parser: без авторизации не буферизуем тело (до 50/15 МБ
@@ -151,8 +181,8 @@ export function createApp({ convert, config = {} } = {}) {
   // type-предикат: тело не парсим для OPTIONS даже если запрос как-то дошёл сюда
   // (defense-in-depth к app.options выше).
   const notPreflight = (req) => req.method !== 'OPTIONS';
-  app.use('/convert', requireAuth, makeRateLimit(), inflightGuard, express.raw({ type: notPreflight, limit: cfg.MAX_BYTES }));
-  app.use('/preview-host', requireAuth, makeRateLimit({ preview: true }), inflightGuard, express.raw({ type: notPreflight, limit: cfg.PREVIEW_MAX_BYTES }));
+  app.use('/convert', makeTiming('convert'), requireAuth, makeRateLimit(), inflightGuard, express.raw({ type: notPreflight, limit: cfg.MAX_BYTES }));
+  app.use('/preview-host', makeTiming('preview'), requireAuth, makeRateLimit({ preview: true }), inflightGuard, express.raw({ type: notPreflight, limit: cfg.PREVIEW_MAX_BYTES }));
 
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -170,6 +200,7 @@ export function createApp({ convert, config = {} } = {}) {
     catch (e) { return res.status(400).json({ error: 'bad filename' }); }   // битый %xx в заголовке
     const ext = (rawName.match(/\.([a-z0-9]+)$/i) || [, ''])[1].toLowerCase();
     if (!ALLOWED_EXT.has(ext)) return res.status(415).json({ error: 'unsupported type' });
+    if (req.metrics) { req.metrics.ext = ext; req.metrics.bytes = body.length; }
 
     // Клиент закрыл модалку → loader отменил POST. Не запускаем soffice впустую
     // и не пишем в мёртвый сокет (иначе очередь забьётся мертвыми конвертациями).
@@ -181,9 +212,13 @@ export function createApp({ convert, config = {} } = {}) {
     if (limit.pendingCount >= cfg.MAX_QUEUE) return res.status(503).json({ error: 'busy' });
 
     try {
+      const queuedAt = Date.now();
       const pdf = await limit(() => {
+        if (req.metrics) req.metrics.queueMs = Date.now() - queuedAt;
         if (aborted) throw new Error('client aborted');
-        return convert(body, ext, () => aborted);
+        const convertStart = Date.now();
+        return Promise.resolve(convert(body, ext, () => aborted))
+          .finally(() => { if (req.metrics) req.metrics.convertMs = Date.now() - convertStart; });
       });
       if (aborted) return;
       res.setHeader('Content-Type', 'application/pdf');
@@ -211,6 +246,7 @@ export function createApp({ convert, config = {} } = {}) {
     catch (e) { return res.status(400).json({ error: 'bad filename' }); }
     let ext = (rawName.match(/\.([a-z0-9]+)$/i) || [, ''])[1].toLowerCase();
     if (ext !== 'csv' && !PREVIEW_EXT.has(ext)) return res.status(415).json({ error: 'unsupported type' });
+    if (req.metrics) { req.metrics.ext = ext; req.metrics.bytes = body.length; }
 
     let aborted = false;
     req.on('aborted', () => { aborted = true; });
@@ -221,11 +257,15 @@ export function createApp({ convert, config = {} } = {}) {
     try {
       // Всю тяжёлую работу (csv→xlsx конвертацию И запись на диск) гоним через тот же
       // p-limit(CONCURRENCY), что и /convert — всплеск аплоадов не положит диск/IO.
+      const queuedAt = Date.now();
       const result = await limit(async () => {
+        if (req.metrics) req.metrics.queueMs = Date.now() - queuedAt;
         if (aborted) throw new Error('aborted');
         let data = body, outExt = ext;
         if (ext === 'csv') {              // Office viewer не открывает csv → конвертируем в xlsx
-          data = await convert(body, 'csv', () => aborted, 'xlsx');
+          const convertStart = Date.now();
+          try { data = await convert(body, 'csv', () => aborted, 'xlsx'); }
+          finally { if (req.metrics) req.metrics.convertMs = Date.now() - convertStart; }
           outExt = 'xlsx';
         }
         await mkdir(cfg.PREVIEW_DIR, { recursive: true });
