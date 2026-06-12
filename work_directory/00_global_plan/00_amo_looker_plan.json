@@ -3,8 +3,8 @@
     "name": "Nexus Looker — amoCRM виджет предпросмотра файлов",
     "slug": "amo_looker",
     "start_date": "2026-06-11",
-    "global_h": 65.75,
-    "global_ai_h": 9.25,
+    "global_h": 82.25,
+    "global_ai_h": 12.1,
     "global_end_date": "2026-06-30",
     "plane_project_id": "abcd54db-b065-4c3e-8866-2a8b4f1bc280",
     "plane_identifier": "AMO"
@@ -512,6 +512,125 @@
         }
       ],
       "plane_module_id": "57e48e32-14c5-4fda-80e2-d830ec249728"
+    },
+    {
+      "id": "E4",
+      "name": "Geo-performance: ускорение для дальних клиентов",
+      "order": 4,
+      "epoch_h": 16.5,
+      "epoch_ai_h": 2.85,
+      "start_date": "2026-06-12",
+      "end_date": "2026-06-16",
+      "sprints": [
+        {
+          "id": "E4S1",
+          "name": "Сервер: baseline, warm LibreOffice, логи, http2",
+          "order": 1,
+          "sprint_h": 10,
+          "sprint_ai_h": 1.7,
+          "sprint_days": 2,
+          "start_date": "2026-06-12",
+          "end_date": "2026-06-15",
+          "tasks": [
+            {
+              "id": "T22",
+              "name": "Этап 0: baseline-замеры конвертера + скрипт проб",
+              "description": "Скрипт синтетических замеров (curl -w: DNS, TCP+TLS, starttransfer, total) для /convert и /preview-host с фикс-файлами (small ~100КБ .doc, medium ~5МБ .xls). Прогон из доступных точек (локальная обязательно; 3 региона EU/US/SEA — по доступности VPS, ограничение честно фиксируется в отчёте). Пробы шлют поддельный Origin (принятый риск спеки §8), X-Source-Token на сторонние машины не выносить. Спека: work_directory/01_specs/04_geo_performance_spec.md, этап 0.",
+              "done_criteria": "Скрипт проб в репо; отчёт work_directory/04_reviews/11_geo_baseline_report.md с p50/p95 по ячейкам матрицы и явным списком точек замера; формула гейта CDN зафиксирована в отчёте.",
+              "realistic_h": 1.5,
+              "pessimistic_h": 2.5,
+              "estimate_h": 2,
+              "ai_estimate_h": 0.3,
+              "task_type": "qa",
+              "status": "todo"
+            },
+            {
+              "id": "T23",
+              "name": "Этап 1.1: прогретый пул LibreOffice (warm) с откатом",
+              "description": "Замена холодного per-request spawn на прогретый пул (unoserver или свой пул soffice; критерий выбора — kill-семантика по таймауту). Инварианты спеки: per-job tmp; таймаут 30с = kill+restart воркера; пул = CONCURRENCY (2); на abort клиента воркера НЕ убивать (job дорабатывает, результат выбрасывается); MAX_INFLIGHT/p-limit сохраняются; env-флаг CONVERT_MODE=warm|cold (cold = старый convert.js, откат). DI-контракт createApp({convert}) не меняется.",
+              "done_criteria": "p50 конвертации small .doc < 1.5с на сервере; kill по таймауту работает (тест); при пуле N — N параллельных без блокировки; после серии abort'ов следующая конвертация идёт тёплым воркером; CONVERT_MODE=cold возвращает старое поведение; npm-тесты конвертера зелёные.",
+              "realistic_h": 3,
+              "pessimistic_h": 5,
+              "estimate_h": 4,
+              "ai_estimate_h": 0.75,
+              "task_type": "code",
+              "status": "todo"
+            },
+            {
+              "id": "T24",
+              "name": "Этап 1.2: тайминг-логи конвертера + X-Request-Id",
+              "description": "JSON-лог на запрос: request id, ext, размер, queue wait ms, convert ms, total ms, исход, страна (CF-IPCountry после CDN, до того unknown). Имена файлов НЕ логируются (инвариант). X-Request-Id возвращается клиенту (джойн проб с логами). Stdout + docker logging driver с ротацией ~30 дней.",
+              "done_criteria": "Каждый запрос /convert и /preview-host даёт ровно одну лог-строку с полным набором полей; в логах нет имён файлов и IP; X-Request-Id в ответе; тест на формат лога.",
+              "realistic_h": 1,
+              "pessimistic_h": 2,
+              "estimate_h": 1.5,
+              "ai_estimate_h": 0.25,
+              "task_type": "code",
+              "status": "todo"
+            },
+            {
+              "id": "T25",
+              "name": "Этап 1.3: http2 в nginx + деплой + повторный замер + гейт CDN",
+              "description": "http2 в nginx-конфиге (с учётом версии nginx: listen ... http2 или http2 on). Деплой обновлённого конвертера на 95.216.44.25 (docker compose up -d --build), проверка /health, ALPN. Повторный замер по матрице T22, подсчёт гейта CDN (медиана доли network_ms/total_ms ≥ 30% на small .doc /convert в SEA/US). Решение по этапу 2 (CDN) фиксируется в отчёте; сам CDN — отдельная работа ЗА гейтом, в этот план не входит.",
+              "done_criteria": "Конвертер на проде в warm-режиме; ALPN отдаёт h2; повторные замеры в отчёте 11_geo_baseline_report.md; гейт-решение по CDN зафиксировано письменно.",
+              "realistic_h": 2,
+              "pessimistic_h": 3,
+              "estimate_h": 2.5,
+              "ai_estimate_h": 0.4,
+              "task_type": "code",
+              "status": "todo"
+            }
+          ]
+        },
+        {
+          "id": "E4S2",
+          "name": "Клиент 0.3.0: preconnect + LRU-кэш (не блокирует модерацию 0.2.0)",
+          "order": 2,
+          "sprint_h": 6.5,
+          "sprint_ai_h": 1.15,
+          "sprint_days": 1,
+          "start_date": "2026-06-15",
+          "end_date": "2026-06-16",
+          "tasks": [
+            {
+              "id": "T26",
+              "name": "Этап 3.1: preconnect к конвертеру и Office viewer",
+              "description": "При открытии модалки для kind office/legacy: preconnect к nexus-oko.naithon.one С crossorigin (CORS-сокет для POST), к view.officeapps.live.com БЕЗ crossorigin (iframe). Вариант HEAD /health — только mode:'no-cors'. Ограничение принято: сокет живёт ~10с, выигрыш для small-файлов. ВАЖНО: правки клиента идут в 0.3.0; релиз-zip 0.2.0 и прод-статика /widget/ НЕ трогаются до решения модерации.",
+              "done_criteria": "Preconnect-линки появляются только для конвертерных kind; нет CORS-ошибок в консоли; тесты inject/modal зелёные; build-guard проходит.",
+              "realistic_h": 1,
+              "pessimistic_h": 2,
+              "estimate_h": 1.5,
+              "ai_estimate_h": 0.25,
+              "task_type": "code",
+              "status": "todo"
+            },
+            {
+              "id": "T27",
+              "name": "Этап 3.2: сессионный LRU-кэш предпросмотров",
+              "description": "In-memory Map href → результат рендера; ключ href как есть; кэшируются только успешные рендеры; лимиты ~100МБ и 10-20 записей, вытеснение LRU; для office — учёт TTL preview-url 5 мин; интеграция с Loader.dispose (кэшированные objectURL не revoke при закрытии модалки, revoke при вытеснении/unload); кэш покрывает и S3-фетчи amo (все форматы). Bump manifest 0.3.0 + сборка нового zip (0.2.0 zip не перезаписывается).",
+              "done_criteria": "Повторное открытие файла в сессии: локальные/legacy < 0.5с (без сетевых запросов), office — без повторного аплоада в пределах TTL; test/cache.test.js зелёный; 0.2.0 zip байт-в-байт не изменён.",
+              "realistic_h": 2,
+              "pessimistic_h": 3.5,
+              "estimate_h": 3,
+              "ai_estimate_h": 0.5,
+              "task_type": "code",
+              "status": "todo"
+            },
+            {
+              "id": "T28",
+              "name": "Двойное ревью + security + актуализация доков и памяти",
+              "description": "Ревью реализации независимым агентом и codex, security-проверка изменений (логи без PII, abort-экономика, CORS/Origin-инварианты, build-guard). Актуализация: CLAUDE.md (warm-пул, CONVERT_MODE, логи), память проекта, орг-память (если подключена), legal-страницы на nexus-oko (упоминание тайминг-логов: страна без IP). Merge-гейт oleg → master, пуш.",
+              "done_criteria": "Находки обоих ревью исправлены или письменно отклонены; security-ревью без открытых high-находок; CLAUDE.md/память/правовые страницы актуальны; merge в master + push выполнены.",
+              "realistic_h": 1.5,
+              "pessimistic_h": 2.5,
+              "estimate_h": 2,
+              "ai_estimate_h": 0.4,
+              "task_type": "qa",
+              "status": "todo"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
