@@ -18,9 +18,21 @@ const HOST = process.env.HOST || '0.0.0.0';  // в docker; изоляцию да
 
 // CONVERT_MODE=warm — прогретый пул unoserver (спека 04, этап 1.1);
 // cold — старый per-request spawn (откат одним env'ом, образ не пересобирать).
+//
+// Гибрид внутри warm-режима (замер 12.06): UNO-конвертация ТЯЖЁЛЫХ файлов на
+// ~25% медленнее прямого soffice (23с против 18с на 2.8МБ xlsx), а warm-выигрыш
+// (~1.5с cold-start) на таких джобах — копейки. Файлы > WARM_MAX_BYTES идут
+// холодным путём: быстрее сами по себе И не занимают тёплых воркеров, которые
+// нужны частым small-файлам. p-limit(CONCURRENCY) в app.js капит суммарную
+// конкурентность обоих путей.
 const MODE = (process.env.CONVERT_MODE || 'cold').toLowerCase();
+const WARM_MAX_BYTES = Number(process.env.WARM_MAX_BYTES || 2 * 1024 * 1024);
 const pool = MODE === 'warm' ? createWarmPool() : null;
-const convert = pool ? pool.convert : coldConvert;
+const convert = pool
+  ? (buf, ext, isAborted, target) => (buf.length > WARM_MAX_BYTES
+      ? coldConvert(buf, ext, isAborted, target)
+      : pool.convert(buf, ext, isAborted, target))
+  : coldConvert;
 
 const { app, cfg } = createApp({ convert });
 
